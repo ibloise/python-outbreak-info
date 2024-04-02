@@ -2,11 +2,12 @@ import sys
 import requests
 import warnings
 import pandas as pd
+import json
 
 from outbreak_data import authenticate_user
 
-server = 'api.outbreak.info'  # or 'dev.outbreak.info'
-nopage = 'fetch_all=true&page=0'  # worth verifying that this works with newer ES versions as well
+server = 'dev.outbreak.info'  # or 'api.outbreak.info'
+dopage = 'fetch_all=true'  # worth verifying that this works with newer ES versions as well
 covid19_endpoint = 'covid19/query'
 test_server = 'test.outbreak.info'
 
@@ -25,6 +26,18 @@ def check_user_authentication():
         sys.exit(1)
     return(token)
 
+def get_auth(auth=None):
+    """
+    Get authentication header for API requests.
+
+    Returns:
+    :return: Dictionary containing the authentication header.
+    """
+    if auth is None:
+        auth = check_user_authentication()
+    return {'Authorization': 'Bearer ' + auth}
+
+
 def get_outbreak_data(endpoint, argstring, server=server, auth=None, collect_all=False, curr_page=0):
     """
     Receives raw data using outbreak API.
@@ -38,18 +51,8 @@ def get_outbreak_data(endpoint, argstring, server=server, auth=None, collect_all
      :param curr_page: iterator state for paging
      :return: A request object containing the raw data
     """
-    # To secure against None type
-    if isinstance(server, type(None)):
-        server = server
-    
-    if auth is None:
-        #check the authentication
-        token = check_user_authentication()
-    else:
-        token = auth
-    token = 'Bearer ' + token
-    auth = {'Authorization': str(token)}
-    # initial request // used to collect data during recursion or as output of single API call
+
+    auth = get_auth(auth)
     url = f'https://{server}/{endpoint}?{argstring}'
     print(url)
 
@@ -123,7 +126,7 @@ def cases_by_location(location, server=server, auth=None, pull_smoothed=0):
         raise Exception("invalid parameter value for pull_smoothed!")
     try:
         locations = '(' + ' OR '.join(location) + ')'
-        args = f'q=location_id:{locations}&sort=date&fields=date,{confirmed},admin1&{nopage}'
+        args = f'q=location_id:{locations}&sort=date&fields=date,{confirmed},admin1&{dopage}'
         raw_data = get_outbreak_data(covid19_endpoint, args, collect_all=True)
         df = pd.DataFrame(raw_data['hits'])
         refined_table=df.drop(columns=['_score', 'admin1'], axis=1)
@@ -659,65 +662,111 @@ def growth_rates(lineage, location='Global'):
     
     return df
 
+metadata_endpoint = "wastewater_metadata/query"
+demix_endpoint = "wastewater_demix/query"
+variants_endpoint = "wastewater_variants/query"
 
-## Wastewater API endpoint: ###
+def get_ww_query(
+    country=None,
+    region=None,
+    site_id=None,
+    date_range=None,
+    sra_ids=None,
+    viral_load_at_least=None,
+    population_at_least=None
+):
+    query_params = []
 
-def ab_formatting(tempdf, df2, df1=None, index=None, done=False): #Formatting helper function
-    #Final Formatting
-    if done:
-        cols = df2.columns.tolist(); cols = cols[-6:] + cols[:-6]
-        df2 = df2[cols]
-        return df2
-    
-    #Formatting for each site_id in abundances loop
-    date = str(df1['collection_date'][index]); site = str(df1['site_id'][index])
-    accession = str(df1['sra_accession'][index]); cov = str(df1['coverage'][index])
-    region = str(df1['geo_loc_region'][index]); country = str(df1['geo_loc_country'][index])
-    tempdf = tempdf.assign(collection_date=date, site_id=site, sra_acession = accession, coverage=cov, 
-                           geo_loc_region=region, geo_loc_country=country)
-    df2 = pd.concat([tempdf, df2], ignore_index=True)
-    return df2
-    
-
-def abundances(df1, site_id=None):
-    
+    if country:
+        query_params.append(f"geo_loc_country:{country}")
+    if region:
+        query_params.append(f"geo_loc_region:{region}")
     if site_id:
-        df1 = df1[df1['site_id'].isin(site_id)].sort_values(by=['site_id']).reset_index()
-               
-    df2 = pd.DataFrame()
+        query_params.append(f"collection_site_id:{site_id}")
+    if date_range:
+        query_params.append(f"collection_date:[{date_range[0]} TO {date_range[1]}]")
+    if sra_ids:
+        sra_query = " OR ".join([f"sra_accession:{sra_id}" for sra_id in sra_ids])
+        query_params.append(f"({sra_query})")
+    if viral_load_at_least:
+        query_params.append(f"viral_load:>={viral_load_at_least}")
+    if population_at_least:
+        query_params.append(f"ww_population:>={population_at_least}")
 
-    for index, value in df1['lineages'].items():  # Handles nested list format
-          data = [value[i] for i in range(len(value))]
-          tempdf = pd.DataFrame(data, index=list(range(len(data))))
-          df2 = ab_formatting(tempdf, df2, df1, index)
-          
-    return ab_formatting(tempdf, df2, done = True)
-          
-    
-def wastewater_query(region, site_id = None, id_list=False):
-    """Returns data on lineages including lineage descendants discovered within a state/province-level location.
-    
-     Arguments:
-     :param region: (Required) A string. 
-     :param site_id: (Optional) A string or list. If valid returns all lineage data discovered only at specified site-ids. Multiple site_id queries must be separated by ","
-     :param id_list: If true returns a Series list of site_ids for the specified region
-     :return: A pandas dataframe."""
-   
-    if isinstance(site_id, str):
-        site_id = site_id.replace(", ", ",")
-        site_id = list(site_id.split(","))
-        
-    query = f'q=geo_loc_region:{region}' 
+    return " AND ".join(query_params)
+
+def get_wastewater_samples(**kwargs):
+    """
+    Retrieve wastewater samples data based on specified filters.
+
+    Arguments:
+    :param country: (Optional) Country name.
+    :param region: (Optional) Region name.
+    :param site_id: (Optional) Site ID.
+    :param date_range: (Optional) Date range in the format [start_date, end_date].
+    :param sra_ids: (Optional) List of SRA IDs.
+    :param viral_load_at_least: (Optional) Minimum viral load threshold.
+    :param population_at_least: (Optional) Minimum population threshold.
+
+    Returns:
+    :return: A pandas DataFrame containing wastewater samples data.
+    """
+    query = get_ww_query(**kwargs)
+    data = get_outbreak_data(metadata_endpoint, f"{dopage}&q=" + query, collect_all=True)
     try:
-        raw_data = get_outbreak_data('wastewater/query', query, server='dev.outbreak.info', collect_all=False)
-        df1 = pd.DataFrame(raw_data['hits'])
-        if id_list:
-           return df1['site_id']
-        df1.drop(['_id', '_score'], axis=1, inplace=True)
-        return abundances(df1, site_id)
+        return pd.DataFrame(data['hits']).drop(columns=['_score', '_id'])
     except:
-        raise KeyError("No data for query was found. " 
-          "Make sure you are using the correct name of the location and/or site_id "
-          "(e.g. region = 'Ohio', site_id = 'OH35000')")
-       
+        raise KeyError("No data for query was found.")
 
+def get_wastewater_latest(**kwargs):
+    query = get_ww_query(**kwargs)
+    data = get_outbreak_data(metadata_endpoint, "size=1&sort=-collection_date&fields=collection_date&q=" + query) 
+    try:
+        return pd.DataFrame(data['hits'])['collection_date'][0]
+    except:
+        raise KeyError("No data for query was found.")
+
+def fetch_ww_data(sample_metadata, endpoint):
+    """
+    Retrieve and join variants or demix info with sample metadata
+
+    Arguments:
+    :param sample_metadata: DataFrame containing metadata.
+    :param endpoint: API endpoint to retrieve data.
+
+    Returns:
+    :return: A pandas DataFrame containing merged data with exploded nested data.
+    """
+    data = {"q": sample_metadata['sra_accession'].tolist(), "scopes": "sra_accession"}
+    url = f'https://{server}/{endpoint}?size=1'
+    response = requests.post(url, headers=get_auth(), json=data)
+    data_df = pd.DataFrame(response.json()).drop(columns=['_score', '_id'])
+    # Merge data with metadata
+    merged_data = pd.merge(sample_metadata, data_df, on='sra_accession')
+    # Explode nested data
+    exploded_data = pd.json_normalize(json.loads(merged_data.explode('variants' if 'variants' in data_df.columns else 'lineages').to_json(orient="records")))
+    return exploded_data
+
+def get_wastewater_mutations(sample_metadata):
+    """
+    Add wastewater mutations data to a DF of samples
+
+    Arguments:
+    :param sample_metadata: DataFrame containing metadata.
+
+    Returns:
+    :return: A pandas DataFrame containing merged wastewater mutations data with metadata.
+    """
+    return fetch_ww_data(sample_metadata, variants_endpoint)
+
+def get_wastewater_lineages(sample_metadata):
+    """
+    Add wastewater demix results to a DF of samples
+
+    Arguments:
+    :param sample_metadata: DataFrame containing metadata.
+
+    Returns:
+    :return: A pandas DataFrame containing merged wastewater lineage abundance data with metadata.
+    """
+    return fetch_ww_data(sample_metadata, demix_endpoint)
