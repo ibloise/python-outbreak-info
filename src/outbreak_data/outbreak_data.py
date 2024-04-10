@@ -159,7 +159,7 @@ def all_lineage_prevalences(location, ndays=180, nday_threshold=10, other_thresh
         other_exclude = other_exclude.replace(" ", "")
         query = query + '&' + f'other_exclude={other_exclude}'
         
-    lins = get_outbreak_data('genomics/prevalence-by-location-all-lineages', query)
+    lins = get_outbreak_data('genomics/prevalence-by-location-all-lineages', query, server=server)
     df = pd.DataFrame(lins['results'])
     if startswith:
         return df.loc[df['lineage'].str.startswith(startswith)]
