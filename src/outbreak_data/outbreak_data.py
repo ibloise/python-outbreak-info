@@ -673,25 +673,29 @@ def get_ww_query(
     date_range=None,
     sra_ids=None,
     viral_load_at_least=None,
-    population_at_least=None
+    population_at_least=None,
+    demix_success=True
 ):
     query_params = []
 
-    if country:
+    if country is not None:
         query_params.append(f"geo_loc_country:{country}")
-    if region:
+    if region is not None:
         query_params.append(f"geo_loc_region:{region}")
-    if site_id:
+    if site_id is not None:
         query_params.append(f"collection_site_id:{site_id}")
-    if date_range:
+    if date_range is not None:
         query_params.append(f"collection_date:[{date_range[0]} TO {date_range[1]}]")
-    if sra_ids:
+    if sra_ids is not None:
         sra_query = " OR ".join([f"sra_accession:{sra_id}" for sra_id in sra_ids])
         query_params.append(f"({sra_query})")
-    if viral_load_at_least:
+    if viral_load_at_least is not None:
         query_params.append(f"viral_load:>={viral_load_at_least}")
-    if population_at_least:
+    if population_at_least is not None:
         query_params.append(f"ww_population:>={population_at_least}")
+    # waiting on mapping update
+    #if demix_success is not None:
+    #   query_params.append(f"demix_success:False")
 
     return " AND ".join(query_params)
 
@@ -743,9 +747,22 @@ def fetch_ww_data(sample_metadata, endpoint):
     data_df = pd.DataFrame(response.json()).drop(columns=['_score', '_id'])
     # Merge data with metadata
     merged_data = pd.merge(sample_metadata, data_df, on='sra_accession')
-    # Explode nested data
-    exploded_data = pd.json_normalize(json.loads(merged_data.explode('variants' if 'variants' in data_df.columns else 'lineages').to_json(orient="records")))
-    return exploded_data
+    # Explode nested data (old API structure)
+    # exploded_data = pd.json_normalize(json.loads(merged_data.explode('variants' if 'variants' in data_df.columns else 'lineages').to_json(orient="records")))
+    return merged_data.drop(columns='notfound', errors='ignore')
+
+def get_wastewater_metadata(sample_metadata):
+    """
+    Add wastewater mutations data to a DF of samples
+
+    Arguments:
+    :param sample_metadata: DataFrame containing metadata.
+
+    Returns:
+    :return: A pandas DataFrame containing merged wastewater mutations data with metadata.
+    """
+    return fetch_ww_data(sample_metadata, metadata_endpoint)
+
 
 def get_wastewater_mutations(sample_metadata):
     """
@@ -770,3 +787,38 @@ def get_wastewater_lineages(sample_metadata):
     :return: A pandas DataFrame containing merged wastewater lineage abundance data with metadata.
     """
     return fetch_ww_data(sample_metadata, demix_endpoint)
+
+def get_wastewater_samples_by_lineage(lineage):
+    """
+    Gets IDs of wastewater samples containing a certain lineage
+
+    Arguments:
+    :param lineage: Target lineage
+
+    Returns:
+    :return: A pandas series containing IDs of samples found to contain that lineage
+    """
+    data = get_outbreak_data(demix_endpoint, f"{dopage}&fields=sra_accession&q=name:{lineage}", collect_all=True)
+    try:
+        return pd.DataFrame(data['hits']).drop(columns=['_score', '_id'])
+    except:
+        raise KeyError("No data for query was found.")
+    return data['sra_accession'].unique()
+
+def get_wastewater_samples_by_mutation(site, alt_base=None):
+    """
+    Gets IDs of wastewater samples containing a certain lineage
+
+    Arguments:
+    :param lineage: Target lineage
+
+    Returns:
+    :return: A pandas series containing IDs of samples found to contain that lineage
+    """
+    alt_base = '' if alt_base is None else ' AND alt_base:'+alt_base
+    data = get_outbreak_data(variants_endpoint, f"{dopage}&fields=sra_accession&q=site:{site}{alt_base}", collect_all=True)
+    try:
+        return pd.DataFrame(data['hits']).drop(columns=['_score', '_id'])
+    except:
+        raise KeyError("No data for query was found.")
+    return data['sra_accession'].unique()
