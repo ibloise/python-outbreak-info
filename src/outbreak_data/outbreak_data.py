@@ -693,9 +693,8 @@ def get_ww_query(
         query_params.append(f"viral_load:>={viral_load_at_least}")
     if population_at_least is not None:
         query_params.append(f"ww_population:>={population_at_least}")
-    # waiting on mapping update
-    #if demix_success is not None:
-    #   query_params.append(f"demix_success:False")
+    if demix_success is not None:
+      query_params.append(f"demix_success:{'true' if demix_success else 'false'}")
 
     return " AND ".join(query_params)
 
@@ -807,10 +806,11 @@ def get_wastewater_samples_by_lineage(lineage):
 
 def get_wastewater_samples_by_mutation(site, alt_base=None):
     """
-    Gets IDs of wastewater samples containing a certain lineage
+    Gets IDs of wastewater samples containing a mutation a certain site
 
     Arguments:
-    :param lineage: Target lineage
+    :param site: Base pair index of mutations of interest
+    :param alt_base: The new base at that site
 
     Returns:
     :return: A pandas series containing IDs of samples found to contain that lineage
