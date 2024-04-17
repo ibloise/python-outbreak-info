@@ -669,7 +669,7 @@ variants_endpoint = "wastewater_variants/query"
 def get_ww_query(
     country=None,
     region=None,
-    site_id=None,
+    collection_site_id=None,
     date_range=None,
     sra_ids=None,
     viral_load_at_least=None,
@@ -682,8 +682,8 @@ def get_ww_query(
         query_params.append(f"geo_loc_country:{country}")
     if region is not None:
         query_params.append(f"geo_loc_region:{region}")
-    if site_id is not None:
-        query_params.append(f"collection_site_id:{site_id}")
+    if collection_site_id is not None:
+        query_params.append(f"collection_site_id:{collection_site_id}")
     if date_range is not None:
         query_params.append(f"collection_date:[{date_range[0]} TO {date_range[1]}]")
     if sra_ids is not None:
@@ -705,7 +705,7 @@ def get_wastewater_samples(**kwargs):
     Arguments:
     :param country: (Optional) Country name.
     :param region: (Optional) Region name.
-    :param site_id: (Optional) Site ID.
+    :param collection_site_id: (Optional) Site ID.
     :param date_range: (Optional) Date range in the format [start_date, end_date].
     :param sra_ids: (Optional) List of SRA IDs.
     :param viral_load_at_least: (Optional) Minimum viral load threshold.
@@ -741,7 +741,7 @@ def fetch_ww_data(sample_metadata, endpoint):
     :return: A pandas DataFrame containing merged data with exploded nested data.
     """
     data = {"q": sample_metadata['sra_accession'].tolist(), "scopes": "sra_accession"}
-    url = f'https://{server}/{endpoint}?size=1'
+    url = f'https://{server}/{endpoint}'
     response = requests.post(url, headers=get_auth(), json=data)
     data_df = pd.DataFrame(response.json()).drop(columns=['_score', '_id'])
     # Merge data with metadata
@@ -822,3 +822,25 @@ def get_wastewater_samples_by_mutation(site, alt_base=None):
     except:
         raise KeyError("No data for query was found.")
     return data['sra_accession'].unique()
+
+def normalize_ww_loads_by_site(df):
+    site_vars = df.groupby('collection_site_id', observed=True)['viral_load'].std().rename('site_var')
+    df = df.merge(site_vars, how='left', on='collection_site_id')
+    df['normed_viral_load'] = df['viral_load'] / df['site_var']
+    return df.drop(columns=['site_var'])
+
+def datebin_and_agg_ww(df, freq='7D', startdate=None, enddate=None, loaded=True):
+    df = df.copy()
+    if startdate is None: startdate = df['collection_date'].min()
+    if enddate is None: enddate = df['collection_date'].max()
+    bins = pd.date_range(startdate, enddate, freq=freq)
+    df['date_bin'] = pd.cut(df['collection_date'], bins)
+    df = df[~df['date_bin'].isna()]
+    df['weight'] = df['normed_viral_load'] * df['ww_population'] if loaded else df['ww_population']
+    agg_loads = lambda x: (x['normed_viral_load'] * x['ww_population']).sum() / x['ww_population'].sum()
+    agg_abundance = lambda lin: lambda x: (x['abundance'] * (x['name'] == lin) * x['weight']).sum() / (x['abundance'] * x['weight']).sum()
+    bins = df.groupby('date_bin', observed=True)
+    agged_loads = bins.apply(agg_loads).rename('viral_load')
+    agged_loads[agged_loads == float('inf')] = pd.NA
+    agged_abundances = [ bins.apply(agg_abundance(lin)).rename(lin).fillna(0) for lin in df['name'].unique() ]
+    return pd.concat( [agged_loads] + agged_abundances, axis=1)

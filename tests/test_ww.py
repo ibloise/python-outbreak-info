@@ -10,7 +10,7 @@ d = outbreak_data.get_wastewater_latest(region="Ohio")
 s = outbreak_data.get_wastewater_samples(region="Ohio", date_range=["2023-06-01", d])
 print(outbreak_data.get_wastewater_lineages(s))
 
-s = outbreak_data.get_wastewater_samples(site_id="USA_OH_5f9e5487", viral_load_at_least=25000)
+s = outbreak_data.get_wastewater_samples(collection_site_id="USA_OH_5f9e5487", viral_load_at_least=25000)
 print(outbreak_data.get_wastewater_mutations(s))
 
 s = outbreak_data.get_wastewater_samples_by_lineage('EG.5.1')
