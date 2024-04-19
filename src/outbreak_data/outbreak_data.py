@@ -3,6 +3,10 @@ import requests
 import warnings
 import pandas as pd
 import json
+import numpy as np
+from frozendict import frozendict
+from matplotlib.colors import hsv_to_rgb
+import yaml
 
 from outbreak_data import authenticate_user
 
@@ -717,9 +721,12 @@ def get_wastewater_samples(**kwargs):
     query = get_ww_query(**kwargs)
     data = get_outbreak_data(metadata_endpoint, f"{dopage}&q=" + query, collect_all=True)
     try:
-        return pd.DataFrame(data['hits']).drop(columns=['_score', '_id'])
+        df = pd.DataFrame(data['hits']).drop(columns=['_score', '_id'])
     except:
         raise KeyError("No data for query was found.")
+    df['viral_load'] = df['viral_load'].where(df['viral_load'] != -1, pd.NA)
+    df['ww_population'] = df['ww_population'].fillna(1000)
+    return df
 
 def get_wastewater_latest(**kwargs):
     query = get_ww_query(**kwargs)
@@ -743,9 +750,9 @@ def fetch_ww_data(sample_metadata, endpoint):
     data = {"q": sample_metadata['sra_accession'].tolist(), "scopes": "sra_accession"}
     url = f'https://{server}/{endpoint}'
     response = requests.post(url, headers=get_auth(), json=data)
-    data_df = pd.DataFrame(response.json()).drop(columns=['_score', '_id'])
+    df = pd.DataFrame(response.json()).drop(columns=['_score', '_id'])
     # Merge data with metadata
-    merged_data = pd.merge(sample_metadata, data_df, on='sra_accession')
+    merged_data = pd.merge(sample_metadata, df, on='sra_accession')
     # Explode nested data (old API structure)
     # exploded_data = pd.json_normalize(json.loads(merged_data.explode('variants' if 'variants' in data_df.columns else 'lineages').to_json(orient="records")))
     return merged_data.drop(columns='notfound', errors='ignore')
@@ -760,7 +767,10 @@ def get_wastewater_metadata(sample_metadata):
     Returns:
     :return: A pandas DataFrame containing merged wastewater mutations data with metadata.
     """
-    return fetch_ww_data(sample_metadata, metadata_endpoint)
+    df = fetch_ww_data(sample_metadata, metadata_endpoint)
+    df['viral_load'] = df['viral_load'].where(df['viral_load'] != -1, pd.NA)
+    df['ww_population'] = df['ww_population'].fillna(1000)
+    return df
 
 
 def get_wastewater_mutations(sample_metadata):
@@ -827,6 +837,7 @@ def normalize_ww_loads_by_site(df):
     site_vars = df.groupby('collection_site_id', observed=True)['viral_load'].std().rename('site_var')
     df = df.merge(site_vars, how='left', on='collection_site_id')
     df['normed_viral_load'] = df['viral_load'] / df['site_var']
+    df['normed_viral_load'].where(~np.isfinite(df['normed_viral_load']), pd.NA)
     return df.drop(columns=['site_var'])
 
 def datebin_and_agg_ww(df, freq='7D', startdate=None, enddate=None, loaded=True):
@@ -842,5 +853,116 @@ def datebin_and_agg_ww(df, freq='7D', startdate=None, enddate=None, loaded=True)
     bins = df.groupby('date_bin', observed=True)
     agged_loads = bins.apply(agg_loads).rename('viral_load')
     agged_loads[agged_loads == float('inf')] = pd.NA
+    agged_loads = agged_loads / agged_loads.max()
     agged_abundances = [ bins.apply(agg_abundance(lin)).rename(lin).fillna(0) for lin in df['name'].unique() ]
+    agged_abundances = pd.DataFrame(agged_abundances).T
+    agged_abundances = agged_abundances.rename(columns = {c:c.split('-like')[0] for c in agged_abundances.columns})
+    agged_abundances = agged_abundances.T.groupby(agged_abundances.columns).sum().T
+    agged_abundances = [agged_abundances[column] for column in agged_abundances.columns]
     return pd.concat( [agged_loads] + agged_abundances, axis=1)
+
+def get_tree(url='https://raw.githubusercontent.com/outbreak-info/outbreak.info/master/curated_reports_prep/lineages.yml'):
+    response = requests.get(url)
+    response = yaml.safe_load(response.content.decode("utf-8"))
+    lin_names = sorted(['*'] + [lin['name'] for lin in response])
+    lindex = {lin:i for i,lin in enumerate(lin_names)}
+    lineage_key = dict([(lin['name'], lin) for lin in response if 'parent' in lin])
+    def get_children(node, lindex):
+        return tuple( frozendict({ 'name': lineage_key[c]['name'], 'lindex': lindex[lineage_key[c]['name']],
+                                   'alias': lineage_key[c]['alias'], 'parent': node['name'],
+                                   'descendants': tuple(node['children']), 'children': get_children(lineage_key[c], lindex) })
+                         for c in node['children'] if c in lineage_key and lineage_key[c]['parent'] == node['name'] )
+    tree = tuple( frozendict({ 'name': lin['name'], 'lindex': lindex[lin['name']],
+                               'alias': lin['alias'], 'parent': '*', 'descendants': tuple(lin['children']),
+                               'children': get_children(lin, lindex) }) for lin in response if not 'parent' in lin )
+    tree = frozendict({ 'name': '*', 'lindex': lindex['*'], 'alias': '*',
+                        'parent': '*', 'descendants':tuple(lineage_key.keys()), 'children': tree })
+    def get_names(tree):
+        return np.concatenate([[(tree['name'], tree)]] + [get_names(c) for c in tree['children']])
+    lineage_key = dict(sorted(get_names(tree), key=lambda x: x[0]))
+    return tree, lineage_key
+
+def cluster_lineages(tree, df=None, abundances=None, n=16, alpha=0.1):
+    (tree, lineage_key) = tree
+    if df is not None:
+        abundances = df.drop(columns=['viral_load']).mul(df['viral_load'], axis=0).sum(axis=0).reindex(lineage_key.keys()).fillna(0)
+    abundances = np.array(abundances)
+    agg_abundances = np.zeros_like(abundances) - 1
+    def init_agg_abundances(node):
+        if agg_abundances[node['lindex']] < 0:
+            agg_abundances[node['lindex']] = abundances[node['lindex']]
+            agg_abundances[node['lindex']] += np.sum([init_agg_abundances(c) for c in node['children']])
+        return agg_abundances[node['lindex']]
+    init_agg_abundances(tree)
+    def update_ancestors(node, diff, W):
+        if not node in W and node['parent'] != node['name']:
+            parent = lineage_key[node['parent']]
+            agg_abundances[parent['lindex']] += diff
+            update_ancestors(parent, diff, W)
+    # def contains_descendant(node, nodeset):
+    #     return len(set(node['descendants']) & set([n['name'] for n in nodeset])) > 0
+    def contains_descendant(node, nodeset):
+        return node in nodeset or \
+               len(set(node['children']) & nodeset) > 0 or \
+               np.sum([contains_descendant(c, nodeset) for c in node['children']]) > 0
+    U,V = set([tree]), set([])
+    while len(U|V) < n:
+        split_node = list(U|V)[np.argmax([np.max(
+            [0] + [agg_abundances[c['lindex']] for c in w['children'] if not c in U|V]) for w in list(U|V)])]
+        C = [c for c in split_node['children'] if not c in U|V]
+        add_node = C[np.argmax([agg_abundances[c['lindex']] for c in C])]
+        update_ancestors(add_node, -agg_abundances[add_node['lindex']], U|V)
+        if split_node in U:
+            U = U - set([split_node])
+            V = V | set([split_node])
+        if contains_descendant(add_node, U|V):
+                V = V | set([add_node])
+        else:   U = U | set([add_node])
+        if len(U) > 1 and len(list(V - set([tree]))) > 1:
+            drop_node = list(V - set([tree]))[np.argmin([agg_abundances[v['lindex']] for v in list(V - set([tree]))])]
+            if agg_abundances[drop_node['lindex']] < alpha * np.mean([agg_abundances[u['lindex']] for u in U]):
+                V = V - set([drop_node])
+                update_ancestors(drop_node, agg_abundances[drop_node['lindex']], U|V)
+    if df is None:
+        return U,V
+    else:
+        def get_agg_abundance(lin, abundances, W=set([])):
+            cs = [get_agg_abundance(c, abundances, W) for c in lin['children'] if not c in W]
+            return (abundances[lin['name']] if lin['name'] in abundances else 0) + np.sum(cs)
+        viral_load = df['viral_load']
+        df = df.drop(columns=['viral_load'])
+        abundances_dated = [row for date,row in df.iterrows()]
+        dates = [date for date,row in df.iterrows()]
+        order = np.argsort([w['alias'] for w in list(U)+list(V)])
+        lins = list(np.array(list(U)+list(V))[order])
+        ulabels = [f'      {u["alias"]}.*' + (f' ({u["name"]})' if u["name"] != u["alias"] else '') for u in U]
+        vlabels = [f'other {v["alias"]}.*' + (f' ({v["name"]})' if v["name"] != v["alias"] else '') for v in V]
+        legend = list(np.array(ulabels+vlabels)[order])
+        clustered_abundances = pd.DataFrame({d:{label:get_agg_abundance(lin, a, U|V)
+                                                for label, lin in zip(legend, lins)}
+                                                for d,a in zip(dates, abundances_dated)}
+                                           ).transpose().join(viral_load)
+        clustered_abundances[np.sum(clustered_abundances.drop(columns=['viral_load']), axis=1) < 0.5] = pd.NA
+        return clustered_abundances, [lin['name'] for lin in lins], np.array([1]*len(U)+[0]*len(V))[order]
+
+def get_colors(lins, isnatural, lineage_key):
+    colors = np.searchsorted(
+        sorted([lin['alias'] for lin in lineage_key.values()]),
+        [lineage_key[lin]['alias'] for lin in lins] )
+    colors = colors ** 2
+    colors = (colors - np.min(colors)) / (np.max(colors)-np.min(colors)) * 0.75
+    return hsv_to_rgb([(color, 1, 0.333 + 0.333*b) for color, b in zip(colors, isnatural)])
+
+def get_riverplot_baseline(clustered_abundances, n=128):
+    c = clustered_abundances.drop(columns=['viral_load']) \
+         .mul(clustered_abundances['viral_load'].interpolate(), axis=0).dropna()
+    d = c.div(clustered_abundances['viral_load'].dropna(), axis=0)
+    def score(O):
+        return (c.cumsum(axis=1).add(O, axis=0).rolling(window=2).apply(np.diff).mul(d)**2).sum().sum()
+    Ot = -clustered_abundances['viral_load'].dropna()/2
+    for n in range(128):
+        O = np.random.normal(size=(len(c),)) / (n+48) * 2
+        if score(O+Ot) < score(Ot):
+            Ot += O
+            Ot -= np.mean(Ot)
+    return pd.Series(Ot, c.index).reindex(clustered_abundances.index).interpolate()
