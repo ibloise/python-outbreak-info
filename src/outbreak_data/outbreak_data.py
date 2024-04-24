@@ -746,7 +746,7 @@ def fetch_ww_data(sample_metadata, endpoint):
     Returns:
     :return: A pandas DataFrame containing merged data with exploded nested data.
     """
-    data = {"q": sample_metadata['sra_accession'].tolist(), "scopes": "sra_accession"}
+    data = {"q": sample_metadata['sra_accession'].unique().tolist(), "scopes": "sra_accession"}
     url = f'https://{server}/{endpoint}'
     response = requests.post(url, headers=get_auth(), json=data)
     df = pd.DataFrame(response.json()).drop(columns=['_score', '_id'])
@@ -796,7 +796,7 @@ def get_wastewater_lineages(sample_metadata):
     """
     return fetch_ww_data(sample_metadata, demix_endpoint)
 
-def get_wastewater_samples_by_lineage(lineage, descendants=False):
+def get_wastewater_samples_by_lineage(lineage, descendants=False, min_abundance=0.01):
     """
     Gets IDs of wastewater samples containing a certain lineage
 
@@ -806,17 +806,15 @@ def get_wastewater_samples_by_lineage(lineage, descendants=False):
     Returns:
     :return: A pandas series containing IDs of samples found to contain that lineage
     """
-    if descendants:
-        data = get_outbreak_data(demix_endpoint, f"{dopage}&fields=sra_accession&q=crumbs:*;{lineage};*", collect_all=True)
-    else:
-        data = get_outbreak_data(demix_endpoint, f"{dopage}&fields=sra_accession&q=name:{lineage}", collect_all=True)
+    namequery = f'name:{lineage}' if not descendants else f'crumbs:*;{lineage};*'
+    data = get_outbreak_data(demix_endpoint, f"{dopage}&q=abundance:>={min_abundance} AND {namequery}", collect_all=True)
     try:
         return pd.DataFrame(data['hits']).drop(columns=['_score', '_id'])
     except:
         raise KeyError("No data for query was found.")
-    return data['sra_accession'].unique()
+    return data #['sra_accession'].unique()
 
-def get_wastewater_samples_by_mutation(site, alt_base=None):
+def get_wastewater_samples_by_mutation(site, alt_base=None, min_frequency=0.01):
     """
     Gets IDs of wastewater samples containing a mutation a certain site
 
@@ -828,12 +826,13 @@ def get_wastewater_samples_by_mutation(site, alt_base=None):
     :return: A pandas series containing IDs of samples found to contain that lineage
     """
     alt_base = '' if alt_base is None else ' AND alt_base:'+alt_base
-    data = get_outbreak_data(variants_endpoint, f"{dopage}&fields=sra_accession&q=site:{site}{alt_base}", collect_all=True)
+    
+    data = get_outbreak_data(variants_endpoint, f"{dopage}&q=frequency:>={min_frequency} AND site:{site}{alt_base}", collect_all=True)
     try:
         return pd.DataFrame(data['hits']).drop(columns=['_score', '_id'])
     except:
         raise KeyError("No data for query was found.")
-    return data['sra_accession'].unique()
+    return data #['sra_accession'].unique()
 
 def normalize_viral_loads_by_site(df):
     site_vars = df.groupby('collection_site_id', observed=True)['viral_load'].std(ddof=1).rename('site_var')
@@ -842,24 +841,24 @@ def normalize_viral_loads_by_site(df):
     df['normed_viral_load'] = df['normed_viral_load'].where(np.isfinite(df['normed_viral_load']), pd.NA)
     return df.drop(columns=['site_var'])
 
-def datebin_and_agg(df, freq='7D', startdate=None, enddate=None, loaded=True):
+def datebin_and_agg(df, freq='7D', startdate=None, enddate=None, loaded=True, norm_abundance=True):
     df = df.copy()
     if startdate is None: startdate = df['collection_date'].min()
     if enddate is None: enddate = df['collection_date'].max()
     startdate = pd.to_datetime(startdate)-pd.Timedelta('1 day')
     enddate = pd.to_datetime(enddate)+pd.Timedelta('1 day')
-    bins = pd.date_range(startdate, enddate, freq=freq)
-    df['date_bin'] = pd.cut(df['collection_date'], bins)
+    if freq is None: df['date_bin'] = pd.Interval(startdate, enddate)
+    else: df['date_bin'] = pd.cut(pd.to_datetime(df['collection_date']), pd.date_range(startdate, enddate, freq=freq))
     df = df[~df['date_bin'].isna()]
-    df['weight'] = df['normed_viral_load'].fillna(0.1) * df['ww_population'] if loaded else df['ww_population']
+    df['weight'] = df['normed_viral_load'].fillna(0.5) * df['ww_population'] if loaded else df['ww_population']
     agg_loads = lambda x: (x['normed_viral_load'] * x['ww_population']).sum() / x['ww_population'].sum()
-    agg_abundance = lambda lin: lambda x: (x['abundance'] * (x['name'] == lin) * x['weight']).sum() / (x['abundance'] * x['weight']).sum()
+    agg_abundance = lambda lin: lambda x: (x['abundance'] * (x['name'] == lin) * x['weight']).sum() / \
+                                          ((x['abundance'] if norm_abundance==True else 1) * x['weight']).sum()
     bins = df.groupby('date_bin', observed=True)
-    agged_loads = bins.apply(agg_loads)
+    agged_loads = bins.apply(agg_loads, include_groups=False)
     agged_loads = agged_loads.rename('viral_load')
     agged_loads = agged_loads.where(np.isfinite(agged_loads), pd.NA)
-    agged_loads = agged_loads / agged_loads.max()
-    agged_abundances = [ bins.apply(agg_abundance(lin)).rename(lin).fillna(0) for lin in df['name'].unique() ]
+    agged_abundances = [ bins.apply(agg_abundance(lin), include_groups=False).rename(lin).fillna(0) for lin in df['name'].unique() ]
     agged_abundances = pd.DataFrame(agged_abundances).T
     agged_abundances = agged_abundances.rename(columns = {c:c.split('-like')[0] for c in agged_abundances.columns})
     agged_abundances = agged_abundances.T.groupby(agged_abundances.columns).sum().T
@@ -956,3 +955,19 @@ def cluster_df(tree, clusters, df):
     clustered_abundances = clustered_abundances.rename_axis(viral_load.index.name)
     if viral_load is not None: clustered_abundances = clustered_abundances.join(viral_load)
     return clustered_abundances, [lin['name'] for lin in lins], np.array([1]*len(U)+[0]*len(V))[order]
+
+def get_descendants(node):
+    return set(node['children']) | set.union(*[get_descendants(c) for c in node['children']]) if len(node['children']) > 0 else set([])
+
+def gather_groups(clusters, abundances, count_scores = tuple([0.1, 4, 4, 1] + [0] * 256)):
+    U,V = clusters[0].copy(), clusters[1].copy()
+    groups = []
+    while len(V) > 0:
+        groupparent = list(V)[np.argmax([
+                count_scores[len(get_descendants(v) & (U|V))] * get_agg_abundance(v, abundances)
+            for v in list(V) ])]
+        descendants = get_descendants(groupparent)
+        groups.append(sorted([groupparent] + list(descendants & (U|V)), key=lambda x: x['name']))
+        V = V - set([groupparent]) - descendants
+        U = U - descendants
+    return groups
