@@ -847,8 +847,9 @@ def datebin_and_agg(df, freq='7D', startdate=None, enddate=None, loaded=True, no
     if enddate is None: enddate = df['collection_date'].max()
     startdate = pd.to_datetime(startdate)-pd.Timedelta('1 day')
     enddate = pd.to_datetime(enddate)+pd.Timedelta('1 day')
-    if freq is None: df['date_bin'] = pd.Interval(startdate, enddate)
-    else: df['date_bin'] = pd.cut(pd.to_datetime(df['collection_date']), pd.date_range(startdate, enddate, freq=freq))
+    if freq is None: dbins = pd.Interval(startdate, enddate)
+    else: dbins = pd.interval_range(startdate, enddate, freq=freq)
+    df['date_bin'] = pd.cut(pd.to_datetime(df['collection_date']), dbins)
     df = df[~df['date_bin'].isna()]
     df['weight'] = df['normed_viral_load'].fillna(0.5) * df['ww_population'] if loaded else df['ww_population']
     agg_loads = lambda x: (x['normed_viral_load'] * x['ww_population']).sum() / x['ww_population'].sum()
@@ -863,7 +864,7 @@ def datebin_and_agg(df, freq='7D', startdate=None, enddate=None, loaded=True, no
     agged_abundances = agged_abundances.rename(columns = {c:c.split('-like')[0] for c in agged_abundances.columns})
     agged_abundances = agged_abundances.T.groupby(agged_abundances.columns).sum().T
     agged_abundances = [agged_abundances[column] for column in agged_abundances.columns]
-    return pd.concat( [agged_loads] + agged_abundances, axis=1)
+    return pd.concat( [agged_loads] + agged_abundances, axis=1).reindex(dbins)
 
 def get_tree(url='https://raw.githubusercontent.com/outbreak-info/outbreak.info/master/curated_reports_prep/lineages.yml'):
     response = requests.get(url)
