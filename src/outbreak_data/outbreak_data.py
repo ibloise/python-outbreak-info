@@ -928,7 +928,7 @@ def cluster_lineages(tree, abundances, n=16, alpha=0.1):
 
 def get_agg_abundance(lin, abundances, W=set([])):
     cs = [get_agg_abundance(c, abundances, W) for c in lin['children'] if not c in W]
-    return (abundances[lin['name']] if lin['name'] in abundances else 0) + np.sum(cs)
+    return np.clip((abundances[lin['name']] if lin['name'] in abundances else 0) + np.sum(cs), 0, None)
 
 def cluster_df(tree, clusters, df):
     (tree, lineage_key) = tree
@@ -953,6 +953,7 @@ def cluster_df(tree, clusters, df):
         for d,a in zip(dates, abundances_dated) } ).transpose()
     clustered_abundances[np.sum(clustered_abundances, axis=1) < 0.5] = pd.NA
     clustered_abundances['other **'] += 1 - clustered_abundances.sum(axis=1)
+    clustered_abundances['other **'] = np.clip(clustered_abundances['other **'], 0, 1)
     clustered_abundances = clustered_abundances.rename_axis(viral_load.index.name)
     if viral_load is not None: clustered_abundances = clustered_abundances.join(viral_load)
     return clustered_abundances, [lin['name'] for lin in lins], np.array([1]*len(U)+[0]*len(V))[order]
@@ -968,7 +969,7 @@ def gather_groups(clusters, abundances, count_scores = tuple([0.1, 4, 4, 1] + [0
                 count_scores[len(get_descendants(v) & (U|V))] * get_agg_abundance(v, abundances)
             for v in list(V) ])]
         descendants = get_descendants(groupparent)
-        groups.append(sorted([groupparent] + list(descendants & (U|V)), key=lambda x: x['name']))
+        groups.append(sorted([groupparent] + list(descendants & (U|V)), key=lambda x: x['alias']))
         V = V - set([groupparent]) - descendants
         U = U - descendants
-    return groups
+    return sorted(groups, key=lambda x: x[0]['alias'], reverse=True)
