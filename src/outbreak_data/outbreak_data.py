@@ -4,15 +4,14 @@ import warnings
 import pandas as pd
 import json
 
-from outbreak_data import authenticate_user
+import authenticate_user
 
-default_server = 'api.outbreak.info' # or 'api.outbreak.info'
+default_server = 'api.outbreak.info' # or 'dev.outbreak.info'
 print_reqs = False
 _dopage = 'fetch_all=true'
 
 def _get_user_authentication():
-    """
-    Get the authorization token.
+    """Get the authorization token.
     :return token: the users authorization token"""
     try: token = authenticate_user.get_authentication()
     except:
@@ -24,8 +23,7 @@ def _get_user_authentication():
     return {'Authorization': 'Bearer ' + token}
 
 def _get_outbreak_data(endpoint, argstring, server=None, auth=None, collect_all=False, curr_page=0):
-    """
-    Receives raw data using outbreak API. 
+    """Receives raw data using outbreak API. 
      :param endpoint: directory in server the data is stored
      :param argstring: feature arguments to provide to API call
      :param server: Server to request from
@@ -66,8 +64,7 @@ def _pangolin_crumbs(pango_lin, lin_prefix=True):
     return query + f'q=pangolin_lineage_crumbs:*;{pango_lin};*'
 
 def cases_by_location(location, pull_smoothed=0, **req_args):
-    """
-    Loads data from a location if input is a string, or from multiple locations
+    """Loads data from a location if input is a string, or from multiple locations
     if location is a list of string locations. Since this API endpoint supports paging, collect_all is used to return all data.
      :param location: A string or list of strings, separate multiple locations by ","
      :param pull_smoothed: For every value >= 0, returns 1000 obs. (paging)
@@ -170,8 +167,7 @@ def global_prevalence(pango_lin, **kwargs):
 
 def all_lineage_prevalences( location, ndays=180, nday_threshold=10, other_threshold=0.05,
                              other_exclude=None, cumulative=None, startswith=None, **req_args ):
-    """
-    Loads prevalence data from a location
+    """Loads prevalence data from a location
      :param location: A string
      :param other_threshold (Default: 0) Minimum prevalence threshold below which lineages must be accumulated under "Other".
      :param nday_threshold (Default: 0) Minimum number of days in which the prevalence of a lineage must be below other_threshold to be accumulated under "Other".
@@ -287,8 +283,6 @@ def gr_significance(location='Global'):
     data = _get_outbreak_data('significance/query', query, collect_all=False)
     return pd.DataFrame(data['hits'])
 
-# wastewater
-
 _ww_metadata_endpoint = "wastewater_metadata/query"
 _ww_demix_endpoint = "wastewater_demix/query"
 _ww_variants_endpoint = "wastewater_variants/query"
@@ -317,8 +311,7 @@ def _ww_metadata_query( country=None, region=None, collection_site_id=None,
     return " AND ".join(query_params)
 
 def get_wastewater_latest(**kwargs):
-    """
-    Retrieve wastewater samples data based on specified filters.
+    """Retrieve wastewater samples data based on specified filters.
     :param country: (Optional) Country name.
     :param region: (Optional) Region name.
     :param collection_site_id: (Optional) Site ID.
@@ -338,8 +331,7 @@ def _get_ww_results(data):
     except: raise KeyError("No data for query was found.")
 
 def get_wastewater_samples(**kwargs):
-    """
-    Retrieve wastewater samples data based on specified filters.
+    """Retrieve wastewater samples data based on specified filters.
     :param country: (Optional) Country name.
     :param region: (Optional) Region name.
     :param collection_site_id: (Optional) Site ID.
@@ -357,8 +349,7 @@ def get_wastewater_samples(**kwargs):
     return df
 
 def get_wastewater_samples_by_lineage(lineage, descendants=False, min_abundance=0.01, **req_args):
-    """
-    Gets IDs of wastewater samples containing a certain lineage
+    """Gets IDs of wastewater samples containing a certain lineage
     :param lineage: Target lineage
     :return: A pandas series containing IDs of samples found to contain that lineage"""
     namequery = f'name:{lineage}' if not descendants else f'crumbs:*;{lineage};*'
@@ -366,8 +357,7 @@ def get_wastewater_samples_by_lineage(lineage, descendants=False, min_abundance=
     return _get_ww_results(data)
 
 def get_wastewater_samples_by_mutation(site, alt_base=None, min_frequency=0.01, **req_args):
-    """
-    Gets IDs of wastewater samples containing a mutation a certain site
+    """Gets IDs of wastewater samples containing a mutation a certain site
     :param site: Base pair index of mutations of interest
     :param alt_base: The new base at that site
     :return: A pandas series containing IDs of samples found to contain that lineage"""
@@ -376,8 +366,7 @@ def get_wastewater_samples_by_mutation(site, alt_base=None, min_frequency=0.01, 
     return _get_ww_results(data)
 
 def _fetch_ww_data(sample_metadata, endpoint, server=None, auth=None):
-    """
-    Retrieve and join variants or demix info with sample metadata
+    """Retrieve and join variants or demix info with sample metadata
     :param sample_metadata: DataFrame containing metadata.
     :param endpoint: API endpoint to retrieve data.
     :return: A pandas DataFrame containing merged data with exploded nested data."""
@@ -392,8 +381,7 @@ def _fetch_ww_data(sample_metadata, endpoint, server=None, auth=None):
     return merged_data.drop(columns='notfound', errors='ignore')
 
 def get_wastewater_metadata(sample_metadata, **req_args):
-    """
-    Add wastewater mutations data to a DF of samples
+    """Add wastewater mutations data to a DF of samples
     :param sample_metadata: DataFrame containing metadata.
     :return: A pandas DataFrame containing merged wastewater mutations data with metadata."""
     df = _fetch_ww_data(sample_metadata, _ww_metadata_endpoint, **req_args)
@@ -402,15 +390,13 @@ def get_wastewater_metadata(sample_metadata, **req_args):
     return df
 
 def get_wastewater_mutations(sample_metadata, **req_args):
-    """
-    Add wastewater mutations data to a DF of samples
+    """Add wastewater mutations data to a DF of samples
     :param sample_metadata: DataFrame containing metadata.
     :return: A pandas DataFrame containing merged wastewater mutations data with metadata."""
     return _fetch_ww_data(sample_metadata, _ww_variants_endpoint, **req_args)
 
 def get_wastewater_lineages(sample_metadata, **req_args):
-    """
-    Add wastewater demix results to a DF of samples
+    """Add wastewater demix results to a DF of samples
     :param sample_metadata: DataFrame containing metadata.
     :return: A pandas DataFrame containing merged wastewater lineage abundance data with metadata."""
     return _fetch_ww_data(sample_metadata, _ww_demix_endpoint, **req_args)
