@@ -67,9 +67,9 @@ def read_compressed_tree(file='./tree.json.gz'):
     with gzip.open(file, 'rb') as f:
         return frozendict.deepfreeze(json.loads(f.read()))
 
-def get_compressed_tree(url='https://raw.githubusercontent.com/outbreak-info/python-outbreak-info/wastewater-sprint/tree.json.gz'):
+def get_compressed_tree(url='https://raw.githubusercontent.com/outbreak-info/python-outbreak-info/wastewater_sprint/tree.json.gz'):
     response = requests.get(url)
-    return frozendict.deepfreeze(response.json())
+    return frozendict.deepfreeze(json.loads(gzip.decompress(response.content)))
 
 def get_lineage_key(tree):
     def get_names(tree):
