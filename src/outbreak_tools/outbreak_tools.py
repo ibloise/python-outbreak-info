@@ -2,9 +2,13 @@ import pandas as pd
 import re
 import warnings
 import numpy as np
-from frozendict import frozendict
+import frozendict
+from collections import OrderedDict
 import yaml
 import requests
+
+import json
+import gzip
 
 def normalize_viral_loads_by_site(df):
     site_vars = df.groupby('collection_site_id', observed=True)['viral_load'].std(ddof=1).rename('site_var')
@@ -45,19 +49,32 @@ def get_tree(url='https://raw.githubusercontent.com/outbreak-info/outbreak.info/
     lindex = {lin:i for i,lin in enumerate(lin_names)}
     lineage_key = dict([(lin['name'], lin) for lin in response if 'parent' in lin])
     def get_children(node, lindex):
-        return tuple( frozendict({ 'name': lineage_key[c]['name'], 'lindex': lindex[lineage_key[c]['name']],
+        return tuple( frozendict.frozendict({ 'name': lineage_key[c]['name'], 'lindex': lindex[lineage_key[c]['name']],
                                    'alias': lineage_key[c]['alias'], 'parent': node['name'],
-                                   'descendants': tuple(node['children']), 'children': get_children(lineage_key[c], lindex) })
+                                   'children': get_children(lineage_key[c], lindex) })
                          for c in node['children'] if c in lineage_key and lineage_key[c]['parent'] == node['name'] )
-    tree = tuple( frozendict({ 'name': lin['name'], 'lindex': lindex[lin['name']],
-                               'alias': lin['alias'], 'parent': '*', 'descendants': tuple(lin['children']),
-                               'children': get_children(lin, lindex) }) for lin in response if not 'parent' in lin )
-    tree = frozendict({ 'name': '*', 'lindex': lindex['*'], 'alias': '*',
-                        'parent': '*', 'descendants':tuple(lineage_key.keys()), 'children': tree })
+    roots = tuple( frozendict.frozendict({ 'name': lin['name'], 'lindex': lindex[lin['name']],
+                               'alias': lin['alias'], 'parent': '*', 'children': get_children(lin, lindex) 
+                             }) for lin in response if not 'parent' in lin )
+    return frozendict.frozendict({ 'name': '*', 'lindex': lindex['*'], 'alias': '*',
+                        'parent': '*', 'children': roots })
+
+def write_compressed_tree(tree, file='./tree.json.gz'):
+    with gzip.open(file, 'wb') as f:
+        f.write(json.dumps(tree).encode('utf-8'))
+
+def read_compressed_tree(file='./tree.json.gz'):
+    with gzip.open(file, 'rb') as f:
+        return frozendict.deepfreeze(json.loads(f.read()))
+
+def get_compressed_tree(url='https://raw.githubusercontent.com/outbreak-info/python-outbreak-info/wastewater-sprint/tree.json.gz'):
+    response = requests.get(url)
+    return frozendict.deepfreeze(response.json())
+
+def get_lineage_key(tree):
     def get_names(tree):
         return np.concatenate([[(tree['name'], tree)]] + [get_names(c) for c in tree['children']])
-    lineage_key = dict(sorted(get_names(tree), key=lambda x: x[0]))
-    return tree, lineage_key
+    return OrderedDict(sorted(get_names(tree), key=lambda x: x[0]))
 
 def cluster_lineages(tree, abundances, n=16, alpha=0.1):
     (tree, lineage_key) = tree
@@ -102,6 +119,9 @@ def get_agg_abundance(lin, abundances, W=set([])):
     cs = [get_agg_abundance(c, abundances, W) for c in lin['children'] if not c in W]
     return np.clip((abundances[lin['name']] if lin['name'] in abundances else 0) + np.sum(cs), 0, None)
 
+def get_descendants(node):
+    return set(node['children']) | set.union(*[get_descendants(c) for c in node['children']]) if len(node['children']) > 0 else set([])
+
 def cluster_df(tree, clusters, df):
     (tree, lineage_key) = tree
     (U,V) = clusters
@@ -129,9 +149,6 @@ def cluster_df(tree, clusters, df):
     clustered_abundances = clustered_abundances.rename_axis(viral_load.index.name)
     if viral_load is not None: clustered_abundances = clustered_abundances.join(viral_load)
     return clustered_abundances, [lin['name'] for lin in lins], np.array([1]*len(U)+[0]*len(V))[order]
-
-def get_descendants(node):
-    return set(node['children']) | set.union(*[get_descendants(c) for c in node['children']]) if len(node['children']) > 0 else set([])
 
 def gather_groups(clusters, abundances, count_scores = tuple([0.1, 4, 4, 1] + [0] * 256)):
     U,V = clusters[0].copy(), clusters[1].copy()
