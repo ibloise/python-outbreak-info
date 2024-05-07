@@ -1,13 +1,11 @@
 import pandas as pd
-import re
-import warnings
 import numpy as np
 import frozendict
 from collections import OrderedDict
-import yaml
 import requests
-import json
 import gzip
+import yaml
+import json
     
 def get_colors(lins, brighten, lineage_key):
     """Heuristically assign colors to lineages to convey divergence.
