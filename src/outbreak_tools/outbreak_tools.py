@@ -83,14 +83,20 @@ def datebin_and_agg(df, weights=None, freq='7D', startdate=None, enddate=None, c
     bins = pd.IntervalIndex(pd.cut(pd.to_datetime(df.index.get_level_values(0)), dbins))
     if weights is None: weights = df.apply(lambda x: 1, axis=1)
     df, weights, bins = df[~bins.isna()], weights[~bins.isna()], bins[~bins.isna()]
-    binsum = lambda data, bins: data.to_frame().groupby(bins).sum()
+    binsum = lambda data, bins: data.to_frame().groupby(bins).sum(min_count=1)
     agged_prevalences = binsum(df[column]*weights, pd.MultiIndex.from_arrays([bins, df.index.get_level_values(1)]))
     agged_prevalences = agged_prevalences.set_index(pd.MultiIndex.from_tuples(agged_prevalences.index)).unstack(1)
     agged_prevalences.columns = agged_prevalences.columns.droplevel(0)
-    denoms = binsum((df[column] if norm else 1) * weights, bins)
-    denoms = denoms[denoms.columns[0]]
-    denoms.index = agged_prevalences.index
-    agged_prevalences = agged_prevalences.div(denoms, axis=0)
+    if norm:
+        denoms = binsum(df[column] * weights, bins)
+        denoms = denoms[denoms.columns[0]]
+        denoms.index = agged_prevalences.index
+        agged_prevalences = agged_prevalences.div(denoms, axis=0)
+    else:
+        denoms = binsum(weights, pd.MultiIndex.from_arrays([bins, df.index.get_level_values(1)]))
+        denoms = denoms.set_index(pd.MultiIndex.from_tuples(denoms.index)).unstack(1)
+        denoms.columns = denoms.columns.droplevel(0)
+        agged_prevalences = agged_prevalences.div(denoms)
     agged_prevalences = agged_prevalences.rename(columns = { c:c.split('-like')[0] for c in agged_prevalences.columns })
     return agged_prevalences.T.groupby(agged_prevalences.columns).sum().T
 

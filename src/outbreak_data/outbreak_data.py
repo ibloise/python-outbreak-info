@@ -404,7 +404,7 @@ def get_wastewater_mutations(input_df, **req_args):
      :return: The input dataframe joined with mutation data columns.
      :example: { 'input_df': pd.DataFrame({'sra_accession': ['SRR26963071', 'SRR25666039']}), 'server': 'dev.outbreak.info' } """
     data = _fetch_ww_data(input_df, 'wastewater_variants/query', **req_args)
-    data['mutation'] = data['site'].astype(str) + data['alt_base'].astype(str)
+    data['mutation'] = data['site'].astype(int).astype(str) + data['alt_base'].astype(str)
     return data.rename(columns={'frequency': 'prevalence'}).set_index('mutation', append=True)
 
 def get_wastewater_lineages(input_df, **req_args):
