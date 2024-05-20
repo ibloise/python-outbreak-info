@@ -63,16 +63,20 @@ def const_idx(df, const, level):
     df = df.copy()
     df.index = df.index.set_levels([const]*len(df), level=level, verify_integrity=False)
     return df
-
-def datebin_and_agg(df, weights=None, freq='7D', startdate=None, enddate=None, column='prevalence', norm=True):
+    
+def datebin_and_agg(df, weights=None, freq='7D', rolling=1, startdate=None, enddate=None, column='prevalence', norm=True, variance=False, log=False, trustna=1):
     """Gather and aggregate samples into signals.
      :param df: A multi-indexed pandas dataframe; df.index[0] is assumed to be a date and df.index[1] a categorical.
-     :param weights: A pandas series of sample weights. `None` is appropriate for clinical data and `get_ww_weights` for wastewater.
+     :param weights: A pandas series of sample weights. `None` is appropriate for clinical df[column] and `get_ww_weights` for wastewater.
      :param freq: Length of date bins as a string.
+     :param rolling: How to smooth the data; an int will be treated as a number of bins to take the rolling mean over, and an array as a kernel.
      :param startdate: Start of date bin range as YYYY-MM-DD string.
      :param enddate: End of date bin range as YYYY-MM-DD string.
      :param column: Data column to aggregate.
      :param norm: Whether to normalize so that aggregated values across all categories in a date bin sum to 1.
+     :param variance: Whether to return the rolling variances along with the aggregated values.
+     :param log: Whether to do the aggregation in log space (geometric vs arithmetic mean).
+     :param trustna: How much weight to place on the nan=0 assumption.
      :return: A pandas dataframe of aggregated values with rows corresponding to date bins and columns corresponding to categories."""
     if startdate is None: startdate = df.index.get_level_values(0).min()
     if enddate is None: enddate = df.index.get_level_values(0).max()
@@ -83,22 +87,39 @@ def datebin_and_agg(df, weights=None, freq='7D', startdate=None, enddate=None, c
     bins = pd.IntervalIndex(pd.cut(pd.to_datetime(df.index.get_level_values(0)), dbins))
     if weights is None: weights = df.apply(lambda x: 1, axis=1)
     df, weights, bins = df[~bins.isna()], weights[~bins.isna()], bins[~bins.isna()]
-    binsum = lambda data, bins: data.to_frame().groupby(bins).sum(min_count=1)
-    agged_prevalences = binsum(df[column]*weights, pd.MultiIndex.from_arrays([bins, df.index.get_level_values(1)]))
-    agged_prevalences = agged_prevalences.set_index(pd.MultiIndex.from_tuples(agged_prevalences.index)).unstack(1)
-    agged_prevalences.columns = agged_prevalences.columns.droplevel(0)
+    eps = 0.001
+    clog, cexp = [(lambda x:x, lambda x:x), (lambda x: np.log(x+eps), lambda x: np.exp(x)-eps)][int(log)]
+    if isinstance(rolling, int): rolling = [1] * rolling
+    else: rolling = np.array(list(rolling))
+    rolling = rolling / np.sum(rolling)
+    rollingf = lambda x: np.convolve(rolling, x, mode='full')[len(rolling)//2:len(x)+len(rolling)//2]
+    interp = lambda x: x.interpolate(limit_direction='both', limit=len(rolling)//2, axis=0) if len(rolling)>1 else x
+    nanmask = np.ones_like(df[column])
+    nanmask[np.isnan(df[column])] = trustna
+    bindex = pd.MultiIndex.from_arrays([bins, df.index.get_level_values(1).str.split('-like').str[0]])
+    def binsum(x):
+        x = x.to_frame().groupby(bindex).sum(min_count=1)
+        x = x.set_index(pd.MultiIndex.from_tuples(x.index)).unstack(1)
+        x.columns = x.columns.droplevel(0)
+        return interp(x).apply(rollingf, axis=0)
+    prevalences = binsum(weights*nanmask*clog(df[column].fillna(0)))
+    denoms = binsum(weights*nanmask)
+    prevalences = prevalences.div(denoms)
+    if variance:
+        means = np.array(prevalences)[
+            prevalences.index.get_indexer_for(bins),
+            prevalences.columns.get_indexer_for(df.index.get_level_values(1))]
+        variances = binsum(weights*nanmask*(clog(df[column].fillna(0)) - means)**2)
+        variances = variances.div(denoms).apply(cexp)
+    prevalences = prevalences.apply(cexp)
     if norm:
-        denoms = binsum(df[column] * weights, bins)
-        denoms = denoms[denoms.columns[0]]
-        denoms.index = agged_prevalences.index
-        agged_prevalences = agged_prevalences.div(denoms, axis=0)
-    else:
-        denoms = binsum(weights, pd.MultiIndex.from_arrays([bins, df.index.get_level_values(1)]))
-        denoms = denoms.set_index(pd.MultiIndex.from_tuples(denoms.index)).unstack(1)
-        denoms.columns = denoms.columns.droplevel(0)
-        agged_prevalences = agged_prevalences.div(denoms)
-    agged_prevalences = agged_prevalences.rename(columns = { c:c.split('-like')[0] for c in agged_prevalences.columns })
-    return agged_prevalences.T.groupby(agged_prevalences.columns).sum().T
+        prevalences = prevalences.mul(denoms)
+        if variance: variances.mul(denoms)
+        denoms = prevalences.sum(axis=1)
+        prevalences = prevalences.div(denoms, axis=0)
+        if variance: variances = variances.div(denoms, axis=0)
+    if log and variance: variances = variances * prevalences**2
+    return (prevalences, variances) if variance else prevalences
 
 def get_tree(url='https://raw.githubusercontent.com/outbreak-info/outbreak.info/master/curated_reports_prep/lineages.yml'):
     """Download and parse the lineage tree (derived from the Pangolin project).
