@@ -285,7 +285,7 @@ def gr_significance(location='Global', n=5):
     
 def _ww_metadata_query( country=None, region=None, collection_site_id=None,
                         date_range=None, sra_ids=None, viral_load_at_least=None,
-                        population_at_least=None, demix_success=True, **kwargs ):
+                        population_at_least=None, demix_success=True, variants_success=True, **kwargs ):
     query_params = []
     if country is not None:
         query_params.append(f"geo_loc_country:{country}")
@@ -304,6 +304,8 @@ def _ww_metadata_query( country=None, region=None, collection_site_id=None,
         query_params.append(f"ww_population:>={population_at_least}")
     if demix_success is not None:
       query_params.append(f"demix_success:{_lboolstr(demix_success)}")
+    if variants_success is not None:
+      query_params.append(f"variants_success:{_lboolstr(variants_success)}")
     return " AND ".join(query_params)
 
 def _get_ww_results(data):
@@ -318,13 +320,7 @@ def _normalize_viral_loads_by_site(df):
     return normed_vl.where(np.isfinite(normed_vl), pd.NA)
 
 def get_wastewater_latest(**kwargs):
-    """Get date of latest wastewater sample matching a given query.
-     :param country: String containing name of country to search within.
-     :param region: String containing name of region to search within.
-     :param collection_site_id: ID of collection site.
-     :param sra_ids: List of sample IDs.
-     :param viral_load_at_least: Minimum viral load threshold for matching samples.
-     :param population_at_least: Minimum population threshold for matching samples.
+    """Get date of latest wastewater sample matching a given query. Same parameters as `get_wastewater_samples`.
      :return: The date of the most recent matching sample in YYYY-MM-DD.
      :example: { 'region': 'Ohio', 'server': 'dev.outbreak.info' } """
     query = _ww_metadata_query(**kwargs)
@@ -342,6 +338,8 @@ def get_wastewater_samples(**kwargs):
      :param sra_ids: List of sample IDs.
      :param viral_load_at_least: Minimum viral load threshold for matching samples.
      :param population_at_least: Minimum population threshold for matching samples.
+     :param demix_success: Whether to gather only samples with valid lineage mix data.
+     :param variants_success: Whether to gather only samples with valid mutation data.
      :return: A pandas dataframe containing the IDs and metadata of matching samples.
      :example: { 'region': 'Ohio', 'date_range': ['2023-06-01', '2023-12-31'], 'server': 'dev.outbreak.info' } """
     query = _ww_metadata_query(**kwargs)
@@ -360,8 +358,8 @@ def get_wastewater_samples_by_lineage(lineage, descendants=False, min_prevalence
      :return: A pandas series containing IDs of samples found to contain matching lineages.
      :example: { 'lineage': 'EG.5.1', 'server': 'dev.outbreak.info' } """
     namequery = f'name:{lineage}' if not descendants else f'crumbs:*;{lineage};*'
-    data = _get_outbreak_data('wastewater_demix/query', f"q=abundance:>={min_prevalence} AND {namequery}", collect_all=True, **req_args)
-    data = _get_ww_results(data).drop(columns=['_score', '_id']).rename(columns={'abundance': 'prevalence'})
+    data = _get_outbreak_data('wastewater_demix/query', f"q=prevalence:>={min_prevalence} AND {namequery}", collect_all=True, **req_args)
+    data = _get_ww_results(data).drop(columns=['_score', '_id'])
     return data.set_index(pd.Index([lineage]*len(data)))
 
 def get_wastewater_samples_by_mutation(site, alt_base=None, min_prevalence=0.01, **req_args):
@@ -372,10 +370,10 @@ def get_wastewater_samples_by_mutation(site, alt_base=None, min_prevalence=0.01,
      :return: A pandas series containing IDs of samples found to contain matching mutations.
      :example: { 'site': 1003, 'alt_base': 'G', 'server': 'dev.outbreak.info' } """
     alt_base = '' if alt_base is None else ' AND alt_base:' + alt_base
-    data = _get_outbreak_data('wastewater_variants/query', f"q=frequency:>={min_prevalence} AND site:{str(site)}{alt_base}", collect_all=True, **req_args)
+    data = _get_outbreak_data('wastewater_variants/query', f"q=prevalence:>={min_prevalence} AND site:{str(site)}{alt_base}", collect_all=True, **req_args)
     data = _get_ww_results(data).drop(columns=['_score', '_id'])
     data['mutation'] = str(site) + str(alt_base)
-    return data.rename(columns={'frequency': 'prevalence'}).set_index('mutation')
+    return data.set_index('mutation')
 
 def _fetch_ww_data(sample_metadata, endpoint, server=None, auth=None):
     if server is None: server = default_server
@@ -405,7 +403,7 @@ def get_wastewater_mutations(input_df, **req_args):
      :example: { 'input_df': pd.DataFrame({'sra_accession': ['SRR26963071', 'SRR25666039']}), 'server': 'dev.outbreak.info' } """
     data = _fetch_ww_data(input_df, 'wastewater_variants/query', **req_args)
     data['mutation'] = data['site'].astype(int).astype(str) + data['alt_base'].astype(str)
-    return data.rename(columns={'frequency': 'prevalence'}).set_index('mutation', append=True)
+    return data.set_index('mutation', append=True)
 
 def get_wastewater_lineages(input_df, **req_args):
     """Add wastewater demix results to a DataFrame containing sample IDs.
@@ -413,4 +411,4 @@ def get_wastewater_lineages(input_df, **req_args):
      :return: The input dataframe joined with lineage data columns.
      :example: { 'input_df': pd.DataFrame({'sra_accession': ['SRR26963071', 'SRR25666039']}), 'server': 'dev.outbreak.info' } """
     data = _fetch_ww_data(input_df, 'wastewater_demix/query', **req_args)
-    return data.rename(columns={'abundance': 'prevalence', 'name': 'lineage'}).set_index('lineage', append=True)
+    return data.rename(columns={'name': 'lineage'}).set_index('lineage', append=True)
