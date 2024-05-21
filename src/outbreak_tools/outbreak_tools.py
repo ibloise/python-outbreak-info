@@ -88,7 +88,7 @@ def datebin_and_agg(df, weights=None, freq='7D', rolling=1, startdate=None, endd
     if weights is None: weights = df.apply(lambda x: 1, axis=1)
     df, weights, bins = df[~bins.isna()], weights[~bins.isna()], bins[~bins.isna()]
     eps = 0.001
-    clog, cexp = [(lambda x:x, lambda x:x), (lambda x: np.log(x+eps), lambda x: np.exp(x)-eps)][int(log)]
+    clog, cexp = [(lambda x:x, lambda x:x), (lambda x: np.log(x+eps), lambda x: np.exp(x))][int(log)]
     if isinstance(rolling, int): rolling = [1] * rolling
     else: rolling = np.array(list(rolling))
     rolling = rolling / np.sum(rolling)
@@ -96,29 +96,28 @@ def datebin_and_agg(df, weights=None, freq='7D', rolling=1, startdate=None, endd
     interp = lambda x: x.interpolate(limit_direction='both', limit=len(rolling)//2, axis=0) if len(rolling)>1 else x
     nanmask = np.ones_like(df[column])
     nanmask[np.isnan(df[column])] = trustna
-    bindex = pd.MultiIndex.from_arrays([bins, df.index.get_level_values(1).str.split('-like').str[0]])
+    bindex = pd.MultiIndex.from_arrays([bins, df.index.get_level_values(1).str.split('-like').str[0].str.split('(').str[0]])
     def binsum(x):
         x = x.to_frame().groupby(bindex).sum(min_count=1)
         x = x.set_index(pd.MultiIndex.from_tuples(x.index)).unstack(1)
         x.columns = x.columns.droplevel(0)
-        return interp(x).apply(rollingf, axis=0)
+        return interp(x.reindex(dbins).sort_index()).apply(rollingf, axis=0)
     prevalences = binsum(weights*nanmask*clog(df[column].fillna(0)))
-    denoms = binsum(weights*nanmask)
-    prevalences = prevalences.div(denoms)
+    if norm:
+        prevalences = prevalences.apply(cexp)
+        denoms = prevalences.sum(axis=1)
+        prevalences = prevalences.div(denoms, axis=0)
+    else:
+        denoms = binsum(weights*nanmask)
+        prevalences = prevalences.div(denoms)
+        prevalences = prevalences.apply(cexp)
     if variance:
         means = np.array(prevalences)[
             prevalences.index.get_indexer_for(bins),
             prevalences.columns.get_indexer_for(df.index.get_level_values(1))]
-        variances = binsum(weights*nanmask*(clog(df[column].fillna(0)) - means)**2)
-        variances = variances.div(denoms).apply(cexp)
-    prevalences = prevalences.apply(cexp)
-    if norm:
-        prevalences = prevalences.mul(denoms)
-        if variance: variances.mul(denoms)
-        denoms = prevalences.sum(axis=1)
-        prevalences = prevalences.div(denoms, axis=0)
-        if variance: variances = variances.div(denoms, axis=0)
-    if log and variance: variances = variances * prevalences**2
+        variances = binsum((weights*nanmask*(clog(df[column].fillna(0)) - clog(means)))**2)
+        variances = variances.div(denoms**2, **({'axis': 0} if norm else {}))
+        if log: variances = variances * prevalences**2
     return (prevalences, variances) if variance else prevalences
 
 def get_tree(url='https://raw.githubusercontent.com/outbreak-info/outbreak.info/master/curated_reports_prep/lineages.yml'):
@@ -147,17 +146,17 @@ def write_compressed_tree(tree, file='./tree.json.gz'):
 def read_compressed_tree(file='./tree.json.gz'):
     with gzip.open(file, 'rb') as f:
         return frozendict.deepfreeze(json.loads(f.read()))
-
-def cluster_df(df, clusters, tree, lineage_key=None):
+        
+def cluster_df(df, clusters, tree, lineage_key=None, norm=True):
     """Aggregate the columns of a dataframe into some phylogenetic groups.
      :param df: A dataframe of prevalence signals. Rows are assumed to be date bins and columns are assumed to be lineages.
      :param clusters: A tuple (U,V) of sets of root nodes representing clusters (from cluster_lineages).
      :param tree: A frozendict representing the root of the phylo tree object.
      :param lineage_key: An OrderedDict mapping names to tree nodes.
+     :param norm: Whether to assume that values in a row should sum to one.
      :return: A tuple (data,names,is_inclusive) where data is the input dataframe with aggregated and relabeled columns, names contains the names of the root lineages for each column/group, and is_inclusive indicates whether the column's root is in U or V."""
     if lineage_key is None: tree = get_lineage_key(tree)
     (U,V) = clusters
-    viral_load = None
     prevalences_dated = [row for date,row in df.iterrows()]
     dates = [date for date,row in df.iterrows()]
     order = np.argsort([w['alias'] for w in list(U)+list(V)])
@@ -169,8 +168,8 @@ def cluster_df(df, clusters, tree, lineage_key=None):
         { d: { label:outbreak_clustering.get_agg_prevalence(lin, a, U|V)
             for label, lin in zip(legend, lins) }
         for d,a in zip(dates, prevalences_dated) } ).transpose()
-    clustered_prevalences[np.sum(clustered_prevalences, axis=1) < 0.5] = pd.NA
-    clustered_prevalences['other **'] += 1 - clustered_prevalences.sum(axis=1)
-    clustered_prevalences['other **'] = np.clip(clustered_prevalences['other **'], 0, 1)
-    if viral_load is not None: clustered_prevalences = clustered_prevalences.join(viral_load)
+    if norm:
+        clustered_prevalences[np.sum(clustered_prevalences, axis=1) < 0.5] = pd.NA
+        clustered_prevalences['other **'] += 1 - clustered_prevalences.sum(axis=1)
+        clustered_prevalences['other **'] = np.clip(clustered_prevalences['other **'], 0, 1)
     return clustered_prevalences, [lin['name'] for lin in lins], np.array([1]*len(U)+[0]*len(V))[order]
