@@ -84,33 +84,33 @@ def datebin_and_agg(df, weights=None, freq='7D', rolling=1, startdate=None, endd
     enddate = pd.to_datetime(enddate)+pd.Timedelta('1 day')
     if freq is None: dbins = [pd.Interval(startdate, enddate)]
     else: dbins = pd.interval_range(startdate, enddate, freq=freq)
-    bins = pd.IntervalIndex(pd.cut(pd.to_datetime(df.index.get_level_values(0)), dbins))
+    bins = pd.IntervalIndex(pd.cut(pd.to_datetime(df.index.get_level_values(0)) + pd.Timedelta('1 hour'), dbins))
     if weights is None: weights = df.apply(lambda x: 1, axis=1)
     df, weights, bins = df[~bins.isna()], weights[~bins.isna()], bins[~bins.isna()]
-    eps = 0.001
+    eps = 1e-8
     clog, cexp = [(lambda x:x, lambda x:x), (lambda x: np.log(x+eps), lambda x: np.exp(x))][int(log)]
     if isinstance(rolling, int): rolling = [1] * rolling
     else: rolling = np.array(list(rolling))
     rolling = rolling / np.sum(rolling)
-    rollingf = lambda x: np.convolve(rolling, x, mode='full')[len(rolling)//2:len(x)+len(rolling)//2]
-    interp = lambda x: x.interpolate(limit_direction='both', limit=len(rolling)//2, axis=0) if len(rolling)>1 else x
-    nanmask = np.ones_like(df[column])
-    nanmask[np.isnan(df[column])] = trustna
+    rollingf = lambda x: np.convolve(rolling,  np.pad(x.fillna(0), len(rolling)//2, 'edge'), mode='valid')
     bindex = pd.MultiIndex.from_arrays([bins, df.index.get_level_values(1).str.split('-like').str[0].str.split('(').str[0]])
     def binsum(x):
         x = x.to_frame().groupby(bindex).sum(min_count=1)
         x = x.set_index(pd.MultiIndex.from_tuples(x.index)).unstack(1)
         x.columns = x.columns.droplevel(0)
-        return interp(x.reindex(dbins).sort_index()).apply(rollingf, axis=0)
+        return x.reindex(dbins).sort_index().apply(rollingf, axis=0)
+    nanmask = (~np.isnan(df[column])).astype(int)
+    nanmask = np.clip(nanmask + trustna, 0, 1)
     prevalences = binsum(weights*nanmask*clog(df[column].fillna(0)))
     if norm:
         prevalences = prevalences.apply(cexp)
         denoms = prevalences.sum(axis=1)
         prevalences = prevalences.div(denoms, axis=0)
     else:
-        denoms = binsum(weights*nanmask)
+        denoms = binsum(weights*nanmask, 0, 1))
         prevalences = prevalences.div(denoms)
         prevalences = prevalences.apply(cexp)
+        prevalences = prevalences.where(binsum(~np.isnan(df[column])) > 0, np.nan)
     if variance:
         means = np.array(prevalences)[
             prevalences.index.get_indexer_for(bins),
