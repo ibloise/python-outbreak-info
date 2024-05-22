@@ -379,7 +379,7 @@ def _fetch_ww_data(sample_metadata, endpoint, server=None, auth=None):
     if server is None: server = default_server
     if auth is None: auth = _get_user_authentication()
     data = {"q": sample_metadata['sra_accession'].unique().tolist(), "scopes": "sra_accession"}
-    url = f'https://{server}/{endpoint}'
+    url = f'https://{server}/{endpoint}/?size=1000'
     if print_reqs: print('POST', url)
     response = requests.post(url, headers=auth, json=data)
     df = pd.DataFrame(response.json()).drop(columns=['_score', '_id'])

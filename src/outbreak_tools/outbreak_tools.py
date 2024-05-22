@@ -107,7 +107,7 @@ def datebin_and_agg(df, weights=None, freq='7D', rolling=1, startdate=None, endd
         denoms = prevalences.sum(axis=1)
         prevalences = prevalences.div(denoms, axis=0)
     else:
-        denoms = binsum(weights*nanmask, 0, 1))
+        denoms = binsum(weights*nanmask)
         prevalences = prevalences.div(denoms)
         prevalences = prevalences.apply(cexp)
         prevalences = prevalences.where(binsum(~np.isnan(df[column])) > 0, np.nan)
