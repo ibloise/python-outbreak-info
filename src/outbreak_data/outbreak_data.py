@@ -2,6 +2,7 @@ import sys
 import requests
 import warnings
 import pandas as pd
+import numpy as np
 import json
 
 from outbreak_data import *
@@ -256,7 +257,9 @@ def all_lineage_prevalences( location=None, ndays=180, nday_threshold=10, other_
     query += f'&ndays={ndays}&nday_threshold={nday_threshold}&other_threshold={other_threshold}&cumulative={_lboolstr(cumulative)}'
     if other_exclude is not None: query += f'&other_exclude={",".join(_list_if_str(other_exclude))}'
     data = _get_outbreak_data('genomics/prevalence-by-location-all-lineages', query[1:], **req_args)
-    return pd.DataFrame(data['results']).set_index('lineage' if cumulative else ['date', 'lineage'])
+    data = pd.DataFrame(data['results'])
+    data['lineage'] = data['lineage'].str.upper()
+    return data.set_index('lineage' if cumulative else ['date', 'lineage'])
 
 def growth_rates(lineage, location='Global'):
     """Get growth rate data for a given lineage in a given location.
@@ -282,7 +285,7 @@ def gr_significance(location='Global', n=5):
     
 def _ww_metadata_query( country=None, region=None, collection_site_id=None,
                         date_range=None, sra_ids=None, viral_load_at_least=None,
-                        population_at_least=None, demix_success=True, **kwargs ):
+                        population_at_least=None, demix_success=True, variants_success=True, **kwargs ):
     query_params = []
     if country is not None:
         query_params.append(f"geo_loc_country:{country}")
@@ -301,16 +304,23 @@ def _ww_metadata_query( country=None, region=None, collection_site_id=None,
         query_params.append(f"ww_population:>={population_at_least}")
     if demix_success is not None:
       query_params.append(f"demix_success:{_lboolstr(demix_success)}")
+    if variants_success is not None:
+      query_params.append(f"variants_success:{_lboolstr(variants_success)}")
     return " AND ".join(query_params)
 
+def _get_ww_results(data):
+    try: return pd.DataFrame(data['hits'])
+    except: raise KeyError("No data for query was found.")
+
+def _normalize_viral_loads_by_site(df):
+    site_vars = df.groupby('collection_site_id', observed=True)['viral_load'].std(ddof=1).rename('site_var')
+    site_vars = site_vars.reindex(df['collection_site_id'])
+    site_vars.index = df.index
+    normed_vl = df['viral_load'] / site_vars
+    return normed_vl.where(np.isfinite(normed_vl), pd.NA)
+
 def get_wastewater_latest(**kwargs):
-    """Get date of latest wastewater sample matching a given query.
-     :param country: String containing name of country to search within.
-     :param region: String containing name of region to search within.
-     :param collection_site_id: ID of collection site.
-     :param sra_ids: List of sample IDs.
-     :param viral_load_at_least: Minimum viral load threshold for matching samples.
-     :param population_at_least: Minimum population threshold for matching samples.
+    """Get date of latest wastewater sample matching a given query. Same parameters as `get_wastewater_samples`.
      :return: The date of the most recent matching sample in YYYY-MM-DD.
      :example: { 'region': 'Ohio', 'server': 'dev.outbreak.info' } """
     query = _ww_metadata_query(**kwargs)
@@ -318,10 +328,6 @@ def get_wastewater_latest(**kwargs):
         "size=1&sort=-collection_date&fields=collection_date&q=" + query,
         server=kwargs.get('server'), auth=kwargs.get('auth') ) 
     return _get_ww_results(data)['collection_date'][0]
-
-def _get_ww_results(data):
-    try: return pd.DataFrame(data['hits'])
-    except: raise KeyError("No data for query was found.")
 
 def get_wastewater_samples(**kwargs):
     """Get IDs and metadata of wastewater samples matching a given query.
@@ -332,6 +338,8 @@ def get_wastewater_samples(**kwargs):
      :param sra_ids: List of sample IDs.
      :param viral_load_at_least: Minimum viral load threshold for matching samples.
      :param population_at_least: Minimum population threshold for matching samples.
+     :param demix_success: Whether to gather only samples with valid lineage mix data.
+     :param variants_success: Whether to gather only samples with valid mutation data.
      :return: A pandas dataframe containing the IDs and metadata of matching samples.
      :example: { 'region': 'Ohio', 'date_range': ['2023-06-01', '2023-12-31'], 'server': 'dev.outbreak.info' } """
     query = _ww_metadata_query(**kwargs)
@@ -339,39 +347,43 @@ def get_wastewater_samples(**kwargs):
                               collect_all=True, server=kwargs.get('server'), auth=kwargs.get('auth'))
     df = _get_ww_results(data).drop(columns=['_score', '_id'])
     df['viral_load'] = df['viral_load'].where(df['viral_load'] != -1, pd.NA)
-    df['ww_population'] = df['ww_population'].fillna(1000)
-    return df
+    df['normed_viral_load'] = _normalize_viral_loads_by_site(df)
+    return df.set_index('collection_date')
 
-def get_wastewater_samples_by_lineage(lineage, descendants=False, min_abundance=0.01, **req_args):
+def get_wastewater_samples_by_lineage(lineage, descendants=False, min_prevalence=0.01, **req_args):
     """Get IDs of wastewater samples containing a certain lineage.
      :param lineage: String containing the name of the target lineage.
      :param descendants: If true, include that lineage's descendants in the query.
-     :param min_abundance: The minimum prevalence necessary for a sample to be considered to contain a lineage.
+     :param min_prevalence: The minimum prevalence necessary for a sample to be considered to contain a lineage.
      :return: A pandas series containing IDs of samples found to contain matching lineages.
      :example: { 'lineage': 'EG.5.1', 'server': 'dev.outbreak.info' } """
     namequery = f'name:{lineage}' if not descendants else f'crumbs:*;{lineage};*'
-    data = _get_outbreak_data('wastewater_demix/query', f"q=abundance:>={min_abundance} AND {namequery}", collect_all=True, **req_args)
-    return _get_ww_results(data).drop(columns=['_score', '_id'])
+    data = _get_outbreak_data('wastewater_demix/query', f"q=prevalence:>={min_prevalence} AND {namequery}", collect_all=True, **req_args)
+    data = _get_ww_results(data).drop(columns=['_score', '_id'])
+    return data.set_index(pd.Index([lineage]*len(data)))
 
-def get_wastewater_samples_by_mutation(site, alt_base=None, min_frequency=0.01, **req_args):
+def get_wastewater_samples_by_mutation(site, alt_base=None, min_prevalence=0.01, **req_args):
     """Get IDs of wastewater samples containing a mutation at a certain site.
      :param site: Positive integer representing the base pair index of mutations of interest.
      :param alt_base: The new base at that site (from ['G', 'A', 'T', 'C']).
+     :param min_prevalence: The minimum prevalence necessary for a sample to be considered to contain a mutation.
      :return: A pandas series containing IDs of samples found to contain matching mutations.
      :example: { 'site': 1003, 'alt_base': 'G', 'server': 'dev.outbreak.info' } """
     alt_base = '' if alt_base is None else ' AND alt_base:' + alt_base
-    data = _get_outbreak_data('wastewater_variants/query', f"q=frequency:>={min_frequency} AND site:{str(site)}{alt_base}", collect_all=True, **req_args)
-    return _get_ww_results(data).drop(columns=['_score', '_id'])
+    data = _get_outbreak_data('wastewater_variants/query', f"q=prevalence:>={min_prevalence} AND site:{str(site)}{alt_base}", collect_all=True, **req_args)
+    data = _get_ww_results(data).drop(columns=['_score', '_id'])
+    data['mutation'] = str(site) + str(alt_base)
+    return data.set_index('mutation')
 
 def _fetch_ww_data(sample_metadata, endpoint, server=None, auth=None):
     if server is None: server = default_server
     if auth is None: auth = _get_user_authentication()
     data = {"q": sample_metadata['sra_accession'].unique().tolist(), "scopes": "sra_accession"}
-    url = f'https://{server}/{endpoint}'
+    url = f'https://{server}/{endpoint}/?size=1000'
     if print_reqs: print('POST', url)
     response = requests.post(url, headers=auth, json=data)
     df = pd.DataFrame(response.json()).drop(columns=['_score', '_id'])
-    merged_data = pd.merge(sample_metadata, df, on='sra_accession')
+    merged_data = pd.merge(sample_metadata.reset_index(names=sample_metadata.index.names), df, on='sra_accession').set_index(sample_metadata.index.names)
     return merged_data.drop(columns='notfound', errors='ignore')
 
 def get_wastewater_metadata(input_df, **req_args):
@@ -381,19 +393,22 @@ def get_wastewater_metadata(input_df, **req_args):
      :example: { 'input_df': pd.DataFrame({'sra_accession': ['SRR26963071', 'SRR25666039']}), 'server': 'dev.outbreak.info' } """
     df = _fetch_ww_data(input_df, 'wastewater_metadata/query', **req_args)
     df['viral_load'] = df['viral_load'].where(df['viral_load'] != -1, pd.NA)
-    # df['ww_population'] = df['ww_population'].fillna(1000)
-    return df
+    df['normed_viral_load'] = _normalize_viral_loads_by_site(df)
+    return df.set_index('collection_date', append=True).reorder_levels([1, 0])
 
 def get_wastewater_mutations(input_df, **req_args):
     """Add wastewater mutations data to a DataFrame containing sample IDs.
      :param input_df: DataFrame containing metadata.
      :return: The input dataframe joined with mutation data columns.
      :example: { 'input_df': pd.DataFrame({'sra_accession': ['SRR26963071', 'SRR25666039']}), 'server': 'dev.outbreak.info' } """
-    return _fetch_ww_data(input_df, 'wastewater_variants/query', **req_args)
+    data = _fetch_ww_data(input_df, 'wastewater_variants/query', **req_args)
+    data['mutation'] = data['site'].astype(int).astype(str) + data['alt_base'].astype(str)
+    return data.set_index('mutation', append=True)
 
 def get_wastewater_lineages(input_df, **req_args):
     """Add wastewater demix results to a DataFrame containing sample IDs.
      :param input_df: DataFrame containing metadata.
      :return: The input dataframe joined with lineage data columns.
      :example: { 'input_df': pd.DataFrame({'sra_accession': ['SRR26963071', 'SRR25666039']}), 'server': 'dev.outbreak.info' } """
-    return _fetch_ww_data(input_df, 'wastewater_demix/query', **req_args)
+    data = _fetch_ww_data(input_df, 'wastewater_demix/query', **req_args)
+    return data.rename(columns={'name': 'lineage'}).set_index('lineage', append=True)
