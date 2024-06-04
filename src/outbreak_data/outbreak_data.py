@@ -4,7 +4,7 @@ import warnings
 import pandas as pd
 import json
 
-from . import authenticate_user
+from outbreak_data import *
 
 default_server = 'api.outbreak.info' # or 'dev.outbreak.info'
 print_reqs = False
