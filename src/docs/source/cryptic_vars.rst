@@ -4,7 +4,7 @@ Tracing Mutations Back to Lineage
 The Python Outbreak API can be queried in order to determine which lineages a mutation has been found in. After collecting a sample and determining what sequences are present, we may have a list of several SARS-CoV-2 mutations that we can immediately say are characteristic of a specific variant. However in some cases, we also may have a mutation that is relatively uncommon in most other samples. 
 For example, we can look at small data sample consisting of 10 mutations: (S:A67V, S:DEL69/70, S:E484A, S:N501Y, S:T572N, S:D614G, S:G142D  N:S2Y, S:Q52R, E:L21F, S:G593D). We’ll want a way to find more details about any mutation collected, such as whether the mutation has been collected before, when, and where that mutation came from.
 
-To start, the ``mutations_by_lineage()`` function allows us to look at the clinical prevalence of a mutation and see which lineage it most likely belongs to. Let's try it for E:L21F::
+To start, the ``mutation_prevalences()`` function allows us to look at the clinical prevalence of a mutation and see which lineage it most likely belongs to. Let's try it for E:L21F::
 
     # Perform authentication if you haven't already
     from outbreak_data import authenticate_user
@@ -13,7 +13,7 @@ To start, the ``mutations_by_lineage()`` function allows us to look at the clini
     # Import outbreak_data package
     from outbreak_data import outbreak_data as od
 
-    lin1 = od.mutations_by_lineage(mutation='E:L21F')
+    lin1 = od.mutation_prevalences(mutation='E:L21F')
     print(lin1)
 
 .. code-block::
@@ -49,7 +49,7 @@ To start, the ``mutations_by_lineage()`` function allows us to look at the clini
 
 This mutation has clearly been seen before in some previous lineages. We might be able recognize that most of the mutations in our list have been detected in older variants, as well as Omicron. However, S:G593D is relatively uncommon in most other samples. We can easily find out where and when it was last detected::
 
-   >>>  lin2 = od.mutations_by_lineage(mutation='S:G593D')
+   >>>  lin2 = od.mutation_prevalences(mutation='S:G593D')
    >>>  print(lin2)
 
         pangolin_lineage  lineage_count  mutation_count  proportion  \
@@ -59,18 +59,16 @@ This mutation has clearly been seen before in some previous lineages. We might b
     0             0.000004             0.000166  
 
    
-   >>>  last_seen = od.collection_date('xbb.1', 'S:G593D')
+   >>>  last_seen = od.most_recent_cl_data('xbb.1', 'S:G593D')
    >>>  print(last_seen)
 
-                   Values
-    date        2022-12-12
-    date_count           1
+   Timestamp(2022-12-22 00:00:00)
 
 According to our data, S:G593D has only been detected once in a single sequence belonging to the xbb.1 lineage. The last time it was collected was back on December 12, 2022. 
 
-Additionally ``mutations_by_lineage`` allows us to find out if there is a lineage where several mutations overlap. Selecting 7 of the mutations from our original list yields one lineage with all of these mutation characteristics::
+Additionally ``mutation_prevalences`` allows us to find out if there is a lineage where several mutations overlap. Selecting 7 of the mutations from our original list yields one lineage with all of these mutation characteristics::
 
-    >>> lin3 = od.mutations_by_lineage(mutation='S:A67V, S:DEL69/70, S:E484A, S:N501Y, S:T572N, S:D614G, S:G142D')
+    >>> lin3 = od.mutation_prevalences(mutation='S:A67V, S:DEL69/70, S:E484A, S:N501Y, S:T572N, S:D614G, S:G142D')
     >>> print(lin3)
 
          pangolin_lineage  lineage_count  mutation_count  proportion  \

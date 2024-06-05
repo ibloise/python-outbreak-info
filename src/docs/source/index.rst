@@ -55,27 +55,18 @@ Core Outbreak Data Tools
 --------------------------
 .. toctree::
    auth_setup
-   cases_by_location
-   lineage_mutations
    all_lineage_prevalences
-   global_prevalence
-   seq_counts
-   mutations_by_lineage
-   prevalence_by_location
-   lineage_by_sub_admin
-   collection_date
-   submission_date
-   mutation_details
+   cases_by_location
    daily_lag
-   wildcard_lineage
+   growth_rates
+   lineage_by_sub_admi
+   mutation_details
+   seq_counts
    wildcard_location
    wildcard_mutations
-   location_details
-   outbreak_data_functions
-   growth_rates
 
-Example analyses:
---------------------------
+Example Applications and Analyses
+----------------------------------
 .. toctree::
    Epidemiological data analyses <epidem_analysis>
    Lineage Prevalence Analyses <lineage_prevalence>
