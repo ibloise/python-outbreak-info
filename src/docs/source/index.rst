@@ -54,21 +54,35 @@ For location-specific analyses, users will need to supply the appropriate locati
 Core Outbreak Data Tools
 --------------------------
 .. toctree::
-   auth_setup
    all_lineage_prevalences
+   auth_setup
    cases_by_location
    daily_lag
    growth_rates
-   lineage_by_sub_admi
+   gr_significance
+   known_mutations
+   lineage_by_sub_admin
+   lineage_cl_prevalence
+   most_recent_cl_data
    mutation_details
+   mutation_prevalences
    seq_counts
    wildcard_location
-   wildcard_mutations
+   wildcard_lineage
+
+Wastewater Analysis Tools
+--------------------------
+.. toctree::
+   get_wastewater_latest
+   get_wastewater_lineages
+   get_wastewater_metadata
+   get_wastewater_mutations
+   get_wastewater_samples
+   get_wastewater_samples_by_lineage
 
 Example Applications and Analyses
 ----------------------------------
 .. toctree::
    Epidemiological data analyses <epidem_analysis>
-   Lineage Prevalence Analyses <lineage_prevalence>
    Mutation Data Analyses <mutation_analysis>
    Dealing with Cryptic Variants <cryptic_vars> 

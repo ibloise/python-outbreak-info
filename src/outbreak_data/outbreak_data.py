@@ -73,9 +73,12 @@ def _get_outbreak_data(endpoint, argstring, server=None, auth=None, collect_all=
     
 def mutation_details(mutations, **req_args):
     """Get details of one or more mutations from clinical data.
+
      :param mutations: Mutation or list of mutations of interest.
+
      :return: A pandas dataframe with one row per mutation.
-     :example: {'mutations':'s:e484*'} """
+
+     :Parameter example: {'mutations':'s:e484*'} """
     mutations = ','.join(_list_if_str(mutations))
     data = _get_outbreak_data('genomics/mutation-details', f'mutations={mutations}', collect_all=False, **req_args)
     return pd.DataFrame(data['results']).set_index('mutation')
@@ -84,17 +87,23 @@ def wildcard_mutations(search, **req_args):
 
 def wildcard_lineage(search, **req_args):
     """Find pango lineages via wildcard search.
+
      :param search: A query string for the lineage name; asterisks treated as wildcards.
+
      :return: A pandas dataframe containing matching lineages and clinical sequence counts.
-     :example: { 'search': '*.86.*' } """
+
+     :Parameter example: { 'search': '*.86.*' } """
     data = _get_outbreak_data('genomics/lineage', f'name={search}', collect_all=False, **req_args)
     return pd.DataFrame(data['results']).set_index('name')
 
 def wildcard_location(search, **req_args):
     """Find location info via wildcard search.
+
      :param search: A query string for the location name; asterisks treated as wildcards.
+
      :return: A pandas dataframe containing matching locations and their metadata.
-     :example: { 'search': '*awai*' } """
+
+     :Parameter example: { 'search': '*awai*' } """
     data = _get_outbreak_data('genomics/location', f'name={search}', collect_all=False, **req_args)
     return pd.DataFrame(data['results']).set_index('id')
 def location_details(location, **req_args):
@@ -102,10 +111,14 @@ def location_details(location, **req_args):
 
 def cases_by_location(location, pull_smoothed=0, **req_args):
     """Get case counts over time in a location
+
      :param location: String or list of location IDs
+
      :param pull_smoothed: 0 -> unsmoothed data, 1 -> weekly smoothed data, 2 -> both.
+
      :return: A pandas df of case counts indexed by location and date.
-     :example: { 'location': ['USA_US-HI', 'USA_US-KY'], 'pull_smoothed': 2 } """
+
+     :Parameter example: { 'location': ['USA_US-HI', 'USA_US-KY'], 'pull_smoothed': 2 } """
     location = _list_if_str(location)
     if not isinstance(location, list) or len(location) == 0:
         raise ValueError('Please enter at least 1 valid location id')
@@ -123,12 +136,15 @@ def cases_by_location(location, pull_smoothed=0, **req_args):
 
 def most_recent_cl_data(pango_lin, mutations=None, location=None, submission=False, **req_args):
     """Get most recent date of clinical sequencing data by location.
+
      :param pango_lin: A string or list of pango lineages. If a list, behavior is OR.
      :param mutations: A string or list of mutations. If a list, behavior is OR.
      :param location: A location ID. If not specified, global data are returned.
      :param submission: True -> submission dates; False -> collection dates.
+
      :return: The most recent date in YYYY-MM-DD.
-     :example: { 'pango_lin': 'ba.2.86.1', 'location': 'USA_US-HI' } """
+
+     :Parameter example: { 'pango_lin': 'ba.2.86.1', 'location': 'USA_US-HI' } """
     query = ''
     if pango_lin is not None: query += f'&pangolin_lineage={",".join(_list_if_str(pango_lin))}'
     if location is not None: query += f'&location_id={location}'
@@ -143,20 +159,26 @@ def submission_date(**args):
 
 def daily_lag(location=None, **req_args):
     """Get the daily lag between collection and submission dates of clinical sequences in a location.
+
      :param location: A string containing a location ID. If not specified, return lag globally.
+
      :return: A pandas dataframe of collection-submission date pairs and clinical sequence counts.
-     :example: { 'location': 'USA_US-HI' } """
+
+     :Parameter example: { 'location': 'USA_US-HI' } """
     query = f'location_id={location}' if location is not None else ''
     data = _get_outbreak_data('genomics/collection-submission', query, collect_all=False, **req_args)
     return pd.DataFrame(data['results']).set_index(['date_collected', 'date_submitted'])
 
 def sequence_counts(location=None, sub_admin=False, **req_args):
     """Get the number of clinical sequences collected for a location.
+
      :param location: A string containing a location ID. If not specified, the global total counts are returned.
      :param subadmin: False -> daily counts, True -> sub-location counts.
+
      :return: A pandas dataframe of sequence counts.
-     :example: { 'location': 'USA_US-HI' }
-     :example: { 'location': 'USA_US-HI', 'sub_admin': True } """
+
+     :Parameter example 1: { 'location': 'USA_US-HI' }
+     :Parameter example 2: { 'location': 'USA_US-HI', 'sub_admin': True } """
     query = f'&cumulative={_lboolstr(sub_admin)}&subadmin={_lboolstr(sub_admin)}'
     if location is not None: query += f'&location_id={location}'
     data = pd.DataFrame(_get_outbreak_data('genomics/sequence-count', query, **req_args)['results'])
@@ -164,13 +186,16 @@ def sequence_counts(location=None, sub_admin=False, **req_args):
 
 def known_mutations(pango_lin=None, descendants=False, mutations=None, freq=0.8, **req_args):
     """Get information about each mutation present in a lineage or set of lineages in clinical sequences.
+
      :param pango_lin: A string or list of lineage names. Return mutations occuring in any of these lineages.
      :param descendants: If True, return mutations contained in pango_lin as well as any descendants (works only with single pango_lin).
      :param mutations: A string or list of mutation names. Return only mutations co-occuring with all of these mutations.
      :param freq: A frequency threshold above which to return mutations.
+
      :return: A pandas dataframe of mutation information.
-     :example: { 'pango_lin': 'BA.2.86.1', 'descendants': True }
-     :example: { 'pango_lin': ['BA.1', 'BA.2'] } """
+
+     :Parameter example 1: { 'pango_lin': 'BA.2.86.1', 'descendants': True }
+     :Parameter example 2: { 'pango_lin': ['BA.1', 'BA.2'] } """
     query = _lin_or_descendants(pango_lin, descendants, ' OR ')
     if mutations is not None: query += f'&mutations={" AND ".join(_list_if_str(mutations))}'
     query += f'&frequency={freq}'
@@ -181,13 +206,16 @@ def lineage_mutations(**kwargs):
 
 def mutation_prevalences( mutations=None, location=None, pango_lin=None, datemin=None, datemax=None, **req_args ):
     """Get the prevalence of a set of mutations given in some subset of clinical sequences.
+
      :param mutations: List of mutations to query for.
      :param location: The ID string of a location to query within.
      :param pango_lineage: The name of a pangolin lineage to query within.
      :param datemin: (Optional). String containing start of date range to query within in YYYY-MM-DD.
      :param datemax: (Optional). String containing end of date range to query within in YYYY-MM-DD.
+
      :return: A pandas dataframe of mutation information.
-     :example: { 'mutations': ['orf1b:r1315c', 's:l24s'], 'pango_lin': 'BA.2' } """
+
+     :Parameter example: { 'mutations': ['orf1b:r1315c', 's:l24s'], 'pango_lin': 'BA.2' } """
     query = f'mutations={", ".join(_list_if_str(mutations))}'
     if pango_lin is not None: query += f'&pangolin_lineage={pango_lin}'
     if location is not None: query += f'&location_id={location}'
@@ -201,6 +229,7 @@ def mutations_by_lineage(**kwargs):
 def lineage_cl_prevalence( pango_lin, descendants=False, location=None, mutations=None,
                            datemin=None, datemax=None, cumulative=False, **req_args ):
     """Get the daily prevalence of a set of lineages in clinical sequencing data.
+
      :param pango_lin: List of lineage names to query for.
      :param descendants: If True, return mutations contained in pango_lin as well as any descendants (works only with single pango_lin).
      :param location: A string containing the location ID to query within.
@@ -208,8 +237,10 @@ def lineage_cl_prevalence( pango_lin, descendants=False, location=None, mutation
      :param datemin: (Optional). String containing start of date range to query within in YYYY-MM-DD.
      :param datemax: (Optional). String containing end of date range to query within in YYYY-MM-DD.
      :param cumulative: If true returns the cumulative global prevalence since the first day of detection.
+
      :return: A pandas dataframe containing prevalence data.
-     :example: { 'pango_lin': 'BA.2.86.1', 'descendants': True } """
+
+     :Parameter example: { 'pango_lin': 'BA.2.86.1', 'descendants': True } """
     query = _lin_or_descendants(pango_lin, descendants)
     if location is not None: query += f'&location_id={location}'
     if mutations is not None: query += f'&mutations={" AND ".join(_list_if_str(mutations))}'
@@ -225,13 +256,16 @@ def global_prevalence(pango_lin, **kwargs):
 
 def lineage_by_sub_admin(pango_lin, mutations=None, location=None, ndays=180, detected=False, **req_args):
     """Get clinical data from the most recent date with more than zero sequences for each sublocation.
+
      :param pangolin_lineage: A list or string of lineage names to query for. Results for each lineage are returned on separate rows.
      :param mutations: A list or string of mutations to query for; only sequences with all of these mutations will match against pangolin_lineage.
      :param location_id: A string containing a location ID. If not specified, returns global data at the country level.
      :param ndays: A positive integer number of days back from the current date to calculative cumuative counts within.
      :param detected: If true return a list of locations where at least one matching sequence has been detected.
+
      :return: A pandas dataframe containing sequence count data.
-     :example: { 'pango_lin': ['BA.1', 'BA.2'], 'location': 'USA' } """
+
+     :Parameter example: { 'pango_lin': ['BA.1', 'BA.2'], 'location': 'USA' } """
     query = f'pangolin_lineage={",".join(_list_if_str(pango_lin))}'
     if mutations is not None: query += f'&mutations={" AND ".join(_list_if_str(mutations))}'
     if location is not None: query += f'&location_id={location}'
@@ -243,15 +277,18 @@ def lineage_by_sub_admin(pango_lin, mutations=None, location=None, ndays=180, de
 def all_lineage_prevalences( location=None, ndays=180, nday_threshold=10, other_threshold=0.05,
                              other_exclude=None, cumulative=False, **req_args ):
     """Get prevalences of lineages circulating in a location according to clinical sequencing data.
+
      :param location: A string containing a location ID. If not specified, global data is returned.
      :param other_threshold: Minimum prevalence threshold below which lineages will be aggregated under "other".
      :param nday_threshold: Minimum number of days in which a lineage's prevalence must be above other_threshold in order to not be aggregated.
      :param ndays: The number of days before the current date to be used as a window to accumulate lineages under "other".
      :param other_exclude: List of lineages that are not to be included under "other".
      :param cumulative: If true return the cumulative prevalence; otherwise return daily data.
+
      :return: A pandas dataframe containing lineage prevalences.
-     :example: { 'location': 'USA_US-HI' }
-     :example: { 'cumulative': True } """
+
+     :Parameter example: { 'location': 'USA_US-HI' }
+     :Parameter example: { 'cumulative': True } """
     query = ''
     if location is not None: query += f'&location_id={location}'
     query += f'&ndays={ndays}&nday_threshold={nday_threshold}&other_threshold={other_threshold}&cumulative={_lboolstr(cumulative)}'
@@ -263,10 +300,13 @@ def all_lineage_prevalences( location=None, ndays=180, nday_threshold=10, other_
 
 def growth_rates(lineage, location='Global'):
     """Get growth rate data for a given lineage in a given location.
+
      :param lineage: A list or string of lineage names.
      :param location: A list or string of location IDs.
+
      :return: A pandas dataframe of lineage growth data.
-     :example: { 'lineage': ['XBB.1.5', 'BA.2.86'], 'location': ['Global', 'USA'] } """
+
+     :Parameter example: { 'lineage': ['XBB.1.5', 'BA.2.86'], 'location': ['Global', 'USA'] } """
     query = f'q=lineage:({" OR ".join(_list_if_str(lineage))}) AND location:({" OR ".join(_list_if_str(location))})'
     data = _get_outbreak_data('growth_rate/query', query, collect_all=False)
     return pd.concat([ pd.DataFrame(d['values'])
@@ -275,10 +315,13 @@ def growth_rates(lineage, location='Global'):
 
 def gr_significance(location='Global', n=5):
     """Get the top lineages with the most significant growth behavior in a given location.
+
      :param location: List or string of location IDs.
      :param n: Number of lineages to return.
+
      :return: A pandas dataframe of significant lineages.
-     :example: { 'location': ['USA', 'Global'] } """
+
+     :Parameter example: { 'location': ['USA', 'Global'] } """
     query = f'q=loc:({" OR ".join(_list_if_str(location))}) AND growing:true&sort=-sig&size=5'
     data = _get_outbreak_data('significance/query', query, collect_all=False)
     return pd.DataFrame(data['hits']).set_index('lin')
@@ -321,8 +364,10 @@ def _normalize_viral_loads_by_site(df):
 
 def get_wastewater_latest(**kwargs):
     """Get date of latest wastewater sample matching a given query. Same parameters as `get_wastewater_samples`.
+
      :return: The date of the most recent matching sample in YYYY-MM-DD.
-     :example: { 'region': 'Ohio', 'server': 'dev.outbreak.info' } """
+
+     :Parameter example: { 'region': 'Ohio', 'server': 'dev.outbreak.info' } """
     query = _ww_metadata_query(**kwargs)
     data = _get_outbreak_data( 'wastewater_metadata/query',
         "size=1&sort=-collection_date&fields=collection_date&q=" + query,
@@ -340,8 +385,10 @@ def get_wastewater_samples(**kwargs):
      :param population_at_least: Minimum population threshold for matching samples.
      :param demix_success: Whether to gather only samples with valid lineage mix data.
      :param variants_success: Whether to gather only samples with valid mutation data.
+
      :return: A pandas dataframe containing the IDs and metadata of matching samples.
-     :example: { 'region': 'Ohio', 'date_range': ['2023-06-01', '2023-12-31'], 'server': 'dev.outbreak.info' } """
+
+     :Parameter example: { 'region': 'Ohio', 'date_range': ['2023-06-01', '2023-12-31'], 'server': 'dev.outbreak.info' } """
     query = _ww_metadata_query(**kwargs)
     data = _get_outbreak_data( 'wastewater_metadata/query', f"q=" + query,
                               collect_all=True, server=kwargs.get('server'), auth=kwargs.get('auth'))
@@ -352,11 +399,14 @@ def get_wastewater_samples(**kwargs):
 
 def get_wastewater_samples_by_lineage(lineage, descendants=False, min_prevalence=0.01, **req_args):
     """Get IDs of wastewater samples containing a certain lineage.
+
      :param lineage: String containing the name of the target lineage.
      :param descendants: If true, include that lineage's descendants in the query.
      :param min_prevalence: The minimum prevalence necessary for a sample to be considered to contain a lineage.
+
      :return: A pandas series containing IDs of samples found to contain matching lineages.
-     :example: { 'lineage': 'EG.5.1', 'server': 'dev.outbreak.info' } """
+
+     :Parameter example: { 'lineage': 'EG.5.1', 'server': 'dev.outbreak.info' } """
     namequery = f'name:{lineage}' if not descendants else f'crumbs:*;{lineage};*'
     data = _get_outbreak_data('wastewater_demix/query', f"q=prevalence:>={min_prevalence} AND {namequery}", collect_all=True, **req_args)
     data = _get_ww_results(data).drop(columns=['_score', '_id'])
@@ -364,11 +414,14 @@ def get_wastewater_samples_by_lineage(lineage, descendants=False, min_prevalence
 
 def get_wastewater_samples_by_mutation(site, alt_base=None, min_prevalence=0.01, **req_args):
     """Get IDs of wastewater samples containing a mutation at a certain site.
+
      :param site: Positive integer representing the base pair index of mutations of interest.
      :param alt_base: The new base at that site (from ['G', 'A', 'T', 'C']).
      :param min_prevalence: The minimum prevalence necessary for a sample to be considered to contain a mutation.
+
      :return: A pandas series containing IDs of samples found to contain matching mutations.
-     :example: { 'site': 1003, 'alt_base': 'G', 'server': 'dev.outbreak.info' } """
+
+     :Parameter example: { 'site': 1003, 'alt_base': 'G', 'server': 'dev.outbreak.info' } """
     alt_base = '' if alt_base is None else ' AND alt_base:' + alt_base
     data = _get_outbreak_data('wastewater_variants/query', f"q=prevalence:>={min_prevalence} AND site:{str(site)}{alt_base}", collect_all=True, **req_args)
     data = _get_ww_results(data).drop(columns=['_score', '_id'])
@@ -388,9 +441,12 @@ def _fetch_ww_data(sample_metadata, endpoint, server=None, auth=None):
 
 def get_wastewater_metadata(input_df, **req_args):
     """Add wastewater sample metadata to a DataFrame containing sample IDs.
+
      :param input_df: Pandas DataFrame containing sample IDs as a column.
+
      :return: The input dataframe joined with metadata columns.
-     :example: { 'input_df': pd.DataFrame({'sra_accession': ['SRR26963071', 'SRR25666039']}), 'server': 'dev.outbreak.info' } """
+
+     :Parameter example: { 'input_df': pd.DataFrame({'sra_accession': ['SRR26963071', 'SRR25666039']}), 'server': 'dev.outbreak.info' } """
     df = _fetch_ww_data(input_df, 'wastewater_metadata/query', **req_args)
     df['viral_load'] = df['viral_load'].where(df['viral_load'] != -1, pd.NA)
     df['normed_viral_load'] = _normalize_viral_loads_by_site(df)
@@ -398,17 +454,23 @@ def get_wastewater_metadata(input_df, **req_args):
 
 def get_wastewater_mutations(input_df, **req_args):
     """Add wastewater mutations data to a DataFrame containing sample IDs.
+
      :param input_df: DataFrame containing metadata.
+
      :return: The input dataframe joined with mutation data columns.
-     :example: { 'input_df': pd.DataFrame({'sra_accession': ['SRR26963071', 'SRR25666039']}), 'server': 'dev.outbreak.info' } """
+
+     :Parameter example: { 'input_df': pd.DataFrame({'sra_accession': ['SRR26963071', 'SRR25666039']}), 'server': 'dev.outbreak.info' } """
     data = _fetch_ww_data(input_df, 'wastewater_variants/query', **req_args)
     data['mutation'] = data['site'].astype(int).astype(str) + data['alt_base'].astype(str)
     return data.set_index('mutation', append=True)
 
 def get_wastewater_lineages(input_df, **req_args):
     """Add wastewater demix results to a DataFrame containing sample IDs.
+
      :param input_df: DataFrame containing metadata.
+
      :return: The input dataframe joined with lineage data columns.
-     :example: { 'input_df': pd.DataFrame({'sra_accession': ['SRR26963071', 'SRR25666039']}), 'server': 'dev.outbreak.info' } """
+
+     :Parameter example: { 'input_df': pd.DataFrame({'sra_accession': ['SRR26963071', 'SRR25666039']}), 'server': 'dev.outbreak.info' } """
     data = _fetch_ww_data(input_df, 'wastewater_demix/query', **req_args)
     return data.rename(columns={'name': 'lineage'}).set_index('lineage', append=True)

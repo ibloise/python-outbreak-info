@@ -1,0 +1,253 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <title>mutation_prevalences &mdash; Python Outbreak.info API 0.1 documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  <link rel="stylesheet" href="_static/fonts.css" type="text/css" />
+
+  
+  
+
+  
+  
+
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> Python Outbreak.info API
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="all_lineage_prevalences.html">all_lineage_prevalences(location, startswith)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="auth_setup.html">authenticate_new_user()</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cases_by_location.html">cases_by_location</a></li>
+<li class="toctree-l1"><a class="reference internal" href="daily_lag.html">daily_lag</a></li>
+<li class="toctree-l1"><a class="reference internal" href="growth_rates.html">growth_rates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gr_significance.html">gr_significance</a></li>
+<li class="toctree-l1"><a class="reference internal" href="known_mutations.html">known_mutations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="lineage_by_sub_admin.html">lineage_by_sub_admin</a></li>
+<li class="toctree-l1"><a class="reference internal" href="lineage_cl_prevalence.html">lineage_cl_prevalence</a></li>
+<li class="toctree-l1"><a class="reference internal" href="most_recent_cl_data.html">most_recent_cl_data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="mutation_details.html">mutation_details</a></li>
+<li class="toctree-l1"><a class="reference internal" href="seq_counts.html">sequence_counts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="wildcard_location.html">wildcard_location</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="get_wastewater_latest.html">get_wastewater_latest</a></li>
+<li class="toctree-l1"><a class="reference internal" href="get_wastewater_lineages.html">get_wastewater_lineages</a></li>
+<li class="toctree-l1"><a class="reference internal" href="get_wastewater_metadata.html">get_wastewater_metadata</a></li>
+<li class="toctree-l1"><a class="reference internal" href="get_wastewater_mutations.html">get_wastewater_mutations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="get_wastewater_samples.html">get_wastewater_samples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="get_wastewater_samples_by_lineage.html">get_wastewater_samples_by_lineage</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="epidem_analysis.html">Epidemiological data analyses</a></li>
+<li class="toctree-l1"><a class="reference internal" href="mutation_analysis.html">Mutation Data Analyses</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cryptic_vars.html">Dealing with Cryptic Variants</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Python Outbreak.info API</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+<div class="git-ribbon">
+  <a href="http://github.com/SwissDataScienceCenter" rel="me">Join us on GitHub</a>
+</div>
+
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+        
+      <li>mutation_prevalences</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="_sources/mutation_prevalences.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <section id="mutation-prevalences">
+<h1>mutation_prevalences<a class="headerlink" href="#mutation-prevalences" title="Permalink to this headline">¶</a></h1>
+<p><strong>Example Usage</strong></p>
+<p>Get prevalence data on mutations orf1b:r1315c and s:l24s under lineage BA.2.86 in the US:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">df</span> <span class="o">=</span> <span class="n">outbreak_data</span><span class="o">.</span><span class="n">mutation_prevalences</span><span class="p">(</span><span class="s1">&#39;orf1b:r1315c, s:l24s&#39;</span><span class="p">,</span> <span class="s1">&#39;USA&#39;</span> <span class="p">,</span><span class="s1">&#39;BA.2.86&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">df</span>
+
+<span class="go">             pangolin_lineage  lineage_count  mutation_count  proportion  \</span>
+<span class="go">query</span>
+<span class="go">s:l24s                ba.2.86             84              77    0.916667</span>
+<span class="go">orf1b:r1315c          ba.2.86             84              84    1.000000</span>
+
+<span class="go">              proportion_ci_lower  proportion_ci_upper</span>
+<span class="go">query</span>
+<span class="go">s:l24s                   0.843358             0.961949</span>
+<span class="go">orf1b:r1315c             0.970625             0.999994</span>
+</pre></div>
+</div>
+</section>
+
+
+           </div>
+           
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &#169; Copyright .
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

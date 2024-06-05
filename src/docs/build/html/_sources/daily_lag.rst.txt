@@ -1,32 +1,25 @@
-daily_lag(location=None)
-----------------------------
+daily_lag
+---------------
 
 .. autofunction:: outbreak_data.daily_lag
 
-Example usage::
+**Example Usage**
 
-    df = outbreak_data.daily_lag('LUX')
-    print(df)
+Get the daily lag for SARS-Cov-2 data in Hawaii::
+    >>> df = outbreak_data.daily_lag('USA_US-HI')
+    >>> df
+                                   total_count
+    date_collected date_submitted             
+    2020-03-05     2020-04-16                1
+    2020-03-07     2020-04-16                1
+    2020-03-11     2020-12-31                1
+    2020-03-12     2020-06-16                2
+                   2020-12-31                1
+    ...                                    ...
+    2024-04-24     2024-05-08                3
+                   2024-05-16                2
+    2024-04-25     2024-05-16                2
+    2024-04-27     2024-05-16                1
+    2024-04-30     2024-05-16                1
 
-.. code-block::
-   :caption: Output
-
-                 Key      Values             Key      Values             Key  \
-    0  date_collected  2020-02-29  date_collected  2020-02-29  date_collected   
-    1  date_submitted  2020-03-07  date_submitted  2020-04-02  date_submitted   
-    2     total_count           1     total_count           1     total_count   
-
-           Values             Key      Values             Key      Values  ...  \
-    0  2020-03-05  date_collected  2020-03-06  date_collected  2020-03-07  ...   
-    1  2020-04-02  date_submitted  2020-04-02  date_submitted  2020-04-02  ...   
-    2           1     total_count           1     total_count           1  ...   
-
-                  Key      Values             Key      Values             Key  \
-    0  date_collected  2023-04-28  date_collected  2023-04-29  date_collected   
-    1  date_submitted  2023-05-10  date_submitted  2023-05-10  date_submitted   
-    2     total_count          20     total_count          11     total_count   
-
-           Values             Key      Values             Key      Values  
-    0  2023-04-30  date_collected  2023-05-01  date_collected  2023-05-02  
-    1  2023-05-10  date_submitted  2023-05-10  date_submitted  2023-05-10  
-    2           1     total_count           5     total_count           2  
+    [5798 rows x 1 columns]
