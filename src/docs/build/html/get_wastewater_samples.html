@@ -195,22 +195,26 @@
 <dl class="py function">
 <dt class="sig sig-object py" id="outbreak_data.get_wastewater_samples">
 <span class="sig-prename descclassname"><span class="pre">outbreak_data.</span></span><span class="sig-name descname"><span class="pre">get_wastewater_samples</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#outbreak_data.get_wastewater_samples" title="Permalink to this definition">¶</a></dt>
-<dd><p>Get IDs and metadata of wastewater samples matching a given query.
-:param country: String containing name of country to search within.
-:param region: String containing name of region to search within.
-:param collection_site_id: ID of collection site.
-:param date_range: Date range in the format [start_date, end_date], with dates in YYYY-MM-DD.
-:param sra_ids: List of sample IDs.
-:param viral_load_at_least: Minimum viral load threshold for matching samples.
-:param population_at_least: Minimum population threshold for matching samples.
-:param demix_success: Whether to gather only samples with valid lineage mix data.
-:param variants_success: Whether to gather only samples with valid mutation data.</p>
+<dd><p>Get IDs and metadata of wastewater samples matching a given query.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Returns</dt>
-<dd class="field-odd"><p>A pandas dataframe containing the IDs and metadata of matching samples.</p>
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>country</strong> – String containing name of country to search within.</p></li>
+<li><p><strong>region</strong> – String containing name of region to search within.</p></li>
+<li><p><strong>collection_site_id</strong> – ID of collection site.</p></li>
+<li><p><strong>date_range</strong> – Date range in the format [start_date, end_date], with dates in YYYY-MM-DD.</p></li>
+<li><p><strong>sra_ids</strong> – List of sample IDs.</p></li>
+<li><p><strong>viral_load_at_least</strong> – Minimum viral load threshold for matching samples.</p></li>
+<li><p><strong>population_at_least</strong> – Minimum population threshold for matching samples.</p></li>
+<li><p><strong>demix_success</strong> – Whether to gather only samples with valid lineage mix data.</p></li>
+<li><p><strong>variants_success</strong> – Whether to gather only samples with valid mutation data.</p></li>
+</ul>
 </dd>
-<dt class="field-even">Parameter example</dt>
-<dd class="field-even"><p>{ ‘region’: ‘Ohio’, ‘date_range’: [‘2023-06-01’, ‘2023-12-31’], ‘server’: ‘dev.outbreak.info’ }</p>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>A pandas dataframe containing the IDs and metadata of matching samples.</p>
+</dd>
+<dt class="field-odd">Parameter example</dt>
+<dd class="field-odd"><p>{ ‘region’: ‘Ohio’, ‘date_range’: [‘2023-06-01’, ‘2023-12-31’], ‘server’: ‘dev.outbreak.info’ }</p>
 </dd>
 </dl>
 </dd></dl>

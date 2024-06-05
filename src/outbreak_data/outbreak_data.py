@@ -7,6 +7,7 @@ import json
 
 from outbreak_data import *
 
+
 default_server = 'api.outbreak.info' # or 'dev.outbreak.info'
 print_reqs = False
 
@@ -376,6 +377,7 @@ def get_wastewater_latest(**kwargs):
 
 def get_wastewater_samples(**kwargs):
     """Get IDs and metadata of wastewater samples matching a given query.
+
      :param country: String containing name of country to search within.
      :param region: String containing name of region to search within.
      :param collection_site_id: ID of collection site.
@@ -474,3 +476,4 @@ def get_wastewater_lineages(input_df, **req_args):
      :Parameter example: { 'input_df': pd.DataFrame({'sra_accession': ['SRR26963071', 'SRR25666039']}), 'server': 'dev.outbreak.info' } """
     data = _fetch_ww_data(input_df, 'wastewater_demix/query', **req_args)
     return data.rename(columns={'name': 'lineage'}).set_index('lineage', append=True)
+

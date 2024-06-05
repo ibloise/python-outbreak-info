@@ -102,8 +102,10 @@
 <li class="toctree-l1"><a class="reference internal" href="lineage_cl_prevalence.html">lineage_cl_prevalence</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">most_recent_cl_data</a></li>
 <li class="toctree-l1"><a class="reference internal" href="mutation_details.html">mutation_details</a></li>
+<li class="toctree-l1"><a class="reference internal" href="mutation_prevalences.html">mutation_prevalences</a></li>
 <li class="toctree-l1"><a class="reference internal" href="seq_counts.html">sequence_counts</a></li>
 <li class="toctree-l1"><a class="reference internal" href="wildcard_location.html">wildcard_location</a></li>
+<li class="toctree-l1"><a class="reference internal" href="wildcard_lineage.html">wildcard_lineage</a></li>
 </ul>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="get_wastewater_latest.html">get_wastewater_latest</a></li>
@@ -190,6 +192,28 @@
             
   <section id="most-recent-cl-data">
 <h1>most_recent_cl_data<a class="headerlink" href="#most-recent-cl-data" title="Permalink to this headline">¶</a></h1>
+<dl class="py function">
+<dt class="sig sig-object py" id="outbreak_data.most_recent_cl_data">
+<span class="sig-prename descclassname"><span class="pre">outbreak_data.</span></span><span class="sig-name descname"><span class="pre">most_recent_cl_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pango_lin</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mutations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">location</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">submission</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">req_args</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#outbreak_data.most_recent_cl_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get most recent date of clinical sequencing data by location.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>pango_lin</strong> – A string or list of pango lineages. If a list, behavior is OR.</p></li>
+<li><p><strong>mutations</strong> – A string or list of mutations. If a list, behavior is OR.</p></li>
+<li><p><strong>location</strong> – A location ID. If not specified, global data are returned.</p></li>
+<li><p><strong>submission</strong> – True -&gt; submission dates; False -&gt; collection dates.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The most recent date in YYYY-MM-DD.</p>
+</dd>
+<dt class="field-odd">Parameter example</dt>
+<dd class="field-odd"><p>{ ‘pango_lin’: ‘ba.2.86.1’, ‘location’: ‘USA_US-HI’ }</p>
+</dd>
+</dl>
+</dd></dl>
+
 <p><strong>Example Usage</strong></p>
 <p>View the last date of sample matching  for BA.2.86 in New York:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">date</span> <span class="o">=</span> <span class="n">outbreak_data</span><span class="o">.</span><span class="n">most_recent_cl_data</span><span class="p">(</span><span class="s1">&#39;BA.2.86&#39;</span><span class="p">,</span> <span class="n">location</span> <span class="o">=</span> <span class="s1">&#39;USA_US-NY&#39;</span> <span class="p">)</span>
