@@ -1,9 +1,11 @@
 known_mutations
 -----------------
 
+.. autofunction:: outbreak_data.known_mutations
+
 **Example Usage**
 
-Get info on all mutations under 'BA.2.86'::
+Get info on all mutations under "BA.2.86"::
 
     >>> df = outbreak_data.known_mutations('BA.2.86')
     >>> df

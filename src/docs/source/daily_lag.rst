@@ -6,6 +6,7 @@ daily_lag
 **Example Usage**
 
 Get the daily lag for SARS-Cov-2 data in Hawaii::
+
     >>> df = outbreak_data.daily_lag('USA_US-HI')
     >>> df
                                    total_count

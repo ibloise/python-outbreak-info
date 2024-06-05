@@ -3,7 +3,7 @@ cases_by_location
  
 .. autofunction:: outbreak_data.cases_by_location
 
-**Example usage***
+**Example Usage**
 
 Get the number of SARS-CoV-2 cases in Colorado::
 

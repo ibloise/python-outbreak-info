@@ -1,6 +1,8 @@
 most_recent_cl_data
 ---------------------
 
+.. autofunction:: outbreak_data.most_recent_cl_data
+
 **Example Usage**
 
 View the last date of sample matching  for BA.2.86 in New York::

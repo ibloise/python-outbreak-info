@@ -103,7 +103,7 @@ def wildcard_location(search, **req_args):
 
      :return: A pandas dataframe containing matching locations and their metadata.
 
-     :Parameter example: { 'search': '*awai*' } """
+     :Parameter example: { "search": "*awai*" } """
     data = _get_outbreak_data('genomics/location', f'name={search}', collect_all=False, **req_args)
     return pd.DataFrame(data['results']).set_index('id')
 def location_details(location, **req_args):
@@ -178,7 +178,7 @@ def sequence_counts(location=None, sub_admin=False, **req_args):
      :return: A pandas dataframe of sequence counts.
 
      :Parameter example 1: { 'location': 'USA_US-HI' }
-     :Parameter example 2: { 'location': 'USA_US-HI', 'sub_admin': True } """
+     :Parameter example 2: { 'location': 'MEX', 'sub_admin': True } """
     query = f'&cumulative={_lboolstr(sub_admin)}&subadmin={_lboolstr(sub_admin)}'
     if location is not None: query += f'&location_id={location}'
     data = pd.DataFrame(_get_outbreak_data('genomics/sequence-count', query, **req_args)['results'])

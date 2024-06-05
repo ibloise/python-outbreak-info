@@ -1,6 +1,8 @@
 mutation_prevalences
 ---------------------
 
+.. autofunction:: outbreak_data.mutation_prevalences
+
 **Example Usage**
 
 Get prevalence data on mutations orf1b:r1315c and s:l24s under lineage BA.2.86 in the US::
