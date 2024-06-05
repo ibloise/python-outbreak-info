@@ -1,4 +1,4 @@
-all_lineage_prevalences(location, startswith)
+all_lineage_prevalences
 ---------------------------------------------
 
 .. autofunction:: outbreak_data.all_lineage_prevalences
