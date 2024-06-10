@@ -77,14 +77,14 @@ def print_terms():
     WE DO NOT SUPPORT THIRD PARTY APPLICATIONS. THIS PACKAGE IS MEANT FOR RESEARCH AND VISUALIZATION PURPOSES ONLY. 
     If you want to build third party applications, please contact GISAID via https://www.gisaid.org/help/contact/.""")
 
-def authenticate_new_user():
+def authenticate_new_user(verify=False):
     """
     Authenticate a user for genomics API access.
     """
     ###this code currently doesn't handle a bad request, make sure that the final product does!
 
     #POST request to the OUTBREAK TOKEN API to get a token 
-    r = requests.post(OUTBREAK_INFO_AUTH)
+    r = requests.post(OUTBREAK_INFO_AUTH, verify=verify)
     if (r.status_code != 200):
         print("Could not get authentication-token")
         r.raise_for_status()
@@ -115,7 +115,7 @@ def authenticate_new_user():
 
         headers = {'Authorization': 'Bearer ' + str(get_authentication())}
 
-        r = requests.get(OUTBREAK_INFO_AUTH, headers=headers)
+        r = requests.get(OUTBREAK_INFO_AUTH, headers=headers, verify=verify)
         #check if the response came through properly
         if (r.status_code == 200):
           print("Authenticated successfully!")

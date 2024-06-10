@@ -25,7 +25,7 @@ def check_user_authentication():
         sys.exit(1)
     return(token)
 
-def get_outbreak_data(endpoint, argstring, server=server, auth=None, collect_all=False, curr_page=0):
+def get_outbreak_data(endpoint, argstring, server=server, auth=None, collect_all=False, curr_page=0, verify=False):
     """
     Receives raw data using outbreak API.
 
@@ -53,7 +53,7 @@ def get_outbreak_data(endpoint, argstring, server=server, auth=None, collect_all
     url = f'https://{server}/{endpoint}?{argstring}'
     print(url)
 
-    in_req = requests.get(url, headers=auth)
+    in_req = requests.get(url, headers=auth, verify=verify)
     if in_req.headers.get('content-type') != 'application/json; charset=UTF-8':
         raise ValueError('Warning!: Potentially missing endpoint. Data not being returned by server.')
     if 400 <= in_req.status_code <= 499:
@@ -134,7 +134,8 @@ def cases_by_location(location, server=server, auth=None, pull_smoothed=0):
             raise Exception('{} is not a valid location ID'.format(i))
 
 
-def all_lineage_prevalences(location, ndays=180, nday_threshold=10, other_threshold=0.05, other_exclude=None, cumulative=None, server=server, auth=None, startswith=None):
+def all_lineage_prevalences(location, ndays=180, nday_threshold=10, other_threshold=0.05, other_exclude=None, cumulative=None, 
+                            server=server, auth=None, startswith=None, verify=False):
     """
     Loads prevalence data from a location
 
@@ -156,7 +157,7 @@ def all_lineage_prevalences(location, ndays=180, nday_threshold=10, other_thresh
         other_exclude = other_exclude.replace(" ", "")
         query = query + '&' + f'other_exclude={other_exclude}'
         
-    lins = get_outbreak_data('genomics/prevalence-by-location-all-lineages', query)
+    lins = get_outbreak_data('genomics/prevalence-by-location-all-lineages', query, verify=verify)
     df = pd.DataFrame(lins['results'])
     if startswith:
         return df.loc[df['lineage'].str.startswith(startswith)]
@@ -175,7 +176,7 @@ def pangolin_crumbs(pango_lin, mutations=None,lin_prefix=True):
     return query
 
 
-def lineage_mutations(pango_lin=None, lineage_crumbs=False, mutations=None, freq=0.8, server=server, auth=None):  ###
+def lineage_mutations(pango_lin=None, lineage_crumbs=False, mutations=None, freq=0.8, server=server, auth=None, verify=False):  ###
     """Retrieves data from all mutations in a specified lineage above a frequency threshold.
        - Use 'OR' in a string to return overlapping mutations in multiple lineages: 'BA.2 OR BA.1'
 
@@ -201,7 +202,7 @@ def lineage_mutations(pango_lin=None, lineage_crumbs=False, mutations=None, freq
         
     if freq!=0.8:
         query = query + f'&frequency={freq}'
-    raw_data = get_outbreak_data('genomics/lineage-mutations', f'{query}', collect_all=False)
+    raw_data = get_outbreak_data('genomics/lineage-mutations', f'{query}', collect_all=False, verify=verify)
     key_list = raw_data['results']
     if len(key_list) == 0:
         raise TypeError('No matches for query found')
