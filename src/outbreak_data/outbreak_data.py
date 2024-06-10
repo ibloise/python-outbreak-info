@@ -82,7 +82,7 @@ def get_outbreak_data(endpoint, argstring, server=server, auth=None, collect_all
         fetching_page = '&fetch_all=True&page='
         page = fetching_page + str(curr_page)
         to_scroll = 'scroll_id=' + scroll_id + page
-        in_req = get_outbreak_data(endpoint, to_scroll, server=server, collect_all=True, curr_page=curr_page+1)
+        in_req = get_outbreak_data(endpoint, to_scroll, server=server, collect_all=True, curr_page=curr_page+1, verify=verify)
         if not isinstance(in_req, type(None)):
             if hits and len(in_req['hits']) == 0:
                 warnings.warn('Warning!: Recursion step has "hits" key but empty data value')
@@ -97,7 +97,7 @@ def get_outbreak_data(endpoint, argstring, server=server, auth=None, collect_all
         return data_json
 
 
-def cases_by_location(location, server=server, auth=None, pull_smoothed=0):
+def cases_by_location(location, server=server, auth=None, pull_smoothed=0, verify=False):
     """
     Loads data from a location if input is a string, or from multiple locations
     if location is a list of string locations. Since this API endpoint supports paging, collect_all is used to return all data.
@@ -124,7 +124,7 @@ def cases_by_location(location, server=server, auth=None, pull_smoothed=0):
     try:
         locations = '(' + ' OR '.join(location) + ')'
         args = f'q=location_id:{locations}&sort=date&fields=date,{confirmed},admin1&{nopage}'
-        raw_data = get_outbreak_data(covid19_endpoint, args, collect_all=True)
+        raw_data = get_outbreak_data(covid19_endpoint, args, collect_all=True, verify=verify)
         df = pd.DataFrame(raw_data['hits'])
         refined_table=df.drop(columns=['_score', 'admin1'], axis=1)
         return refined_table
@@ -214,7 +214,7 @@ def lineage_mutations(pango_lin=None, lineage_crumbs=False, mutations=None, freq
     return df
     
 
-def global_prevalence(pango_lin, mutations=None, cumulative=None, lineage_crumbs=False, server=server):
+def global_prevalence(pango_lin, mutations=None, cumulative=None, lineage_crumbs=False, server=server, verify=False):
    
     """Returns the global daily prevalence of a PANGO lineage
        
@@ -241,7 +241,7 @@ def global_prevalence(pango_lin, mutations=None, cumulative=None, lineage_crumbs
         query = query + '&' + 'cumulative=true'
     if lineage_crumbs:
         # using a modified formulation to access the crumbs 
-        raw_data = get_outbreak_data('genomics/prevalence-by-location', query, collect_all=False)
+        raw_data = get_outbreak_data('genomics/prevalence-by-location', query, collect_all=False, verify=verify)
         key_list = raw_data['results']
         key_list = list(key_list)
         if cumulative:
@@ -260,7 +260,7 @@ def global_prevalence(pango_lin, mutations=None, cumulative=None, lineage_crumbs
                     newdf = pd.DataFrame(raw_data['results'][i]) # append each df
                     df = pd.concat([df, newdf], sort=False)  
     else:
-        raw_data = get_outbreak_data('genomics/global-prevalence', f'pangolin_lineage={query}')
+        raw_data = get_outbreak_data('genomics/global-prevalence', f'pangolin_lineage={query}', verify=verify)
         if cumulative:
             data = {'Values' : raw_data['results']}
             df = pd.DataFrame(data) 
@@ -268,7 +268,7 @@ def global_prevalence(pango_lin, mutations=None, cumulative=None, lineage_crumbs
             df = pd.DataFrame(raw_data['results'])
     return df
 
-def sequence_counts(location=None, cumulative=None, sub_admin=None, server=server):
+def sequence_counts(location=None, cumulative=None, sub_admin=None, server=server, verify=False):
     """Returns number of sequences per day by location
 
     Arguments:
@@ -286,7 +286,7 @@ def sequence_counts(location=None, cumulative=None, sub_admin=None, server=serve
     if sub_admin:
         query = query + '&' + 'subadmin=true'
     
-    raw_data = get_outbreak_data('genomics/sequence-count', f'{query}')
+    raw_data = get_outbreak_data('genomics/sequence-count', f'{query}', verify=verify)
      
     if cumulative or sub_admin:
         data = {'Values' : raw_data['results']}
@@ -295,7 +295,7 @@ def sequence_counts(location=None, cumulative=None, sub_admin=None, server=serve
         df = pd.DataFrame(raw_data['results'])
     return df
 
-def mutations_by_lineage(mutation=None, location=None, pango_lin=None, lineage_crumbs=False, datemin=None,  datemax=None, freq=None, server=server):
+def mutations_by_lineage(mutation=None, location=None, pango_lin=None, lineage_crumbs=False, datemin=None,  datemax=None, freq=None, server=server,verify=False):
     """Returns the prevalence of a mutation or series of mutations across specified lineages by location
 
     Arguments:
@@ -323,7 +323,7 @@ def mutations_by_lineage(mutation=None, location=None, pango_lin=None, lineage_c
     if datemin and datemax:
         query = query + f'&datemin={datemin}&datemax={datemax}'
 
-    raw_data = get_outbreak_data('genomics/mutations-by-lineage', f'{query}')
+    raw_data = get_outbreak_data('genomics/mutations-by-lineage', f'{query}', verify=verify)
     
     key_list = raw_data['results']
     key_list = list(key_list)
@@ -335,7 +335,7 @@ def mutations_by_lineage(mutation=None, location=None, pango_lin=None, lineage_c
 
 
 def prevalence_by_location(pango_lin, location, mutations=None,  datemin=None, lineage_crumbs=False, 
-                           datemax=None, cumulative=None, server=server):
+                           datemax=None, cumulative=None, server=server, verify=False):
     """Returns the daily prevalence of a PANGO lineage by location.
    
        Arguments:
@@ -374,9 +374,9 @@ def prevalence_by_location(pango_lin, location, mutations=None,  datemin=None, l
         query = query + f'&datemin={datemin}&datemax={datemax}'
    
     if lineage_crumbs:
-        raw_data = get_outbreak_data('genomics/prevalence-by-location', query, collect_all=False)
+        raw_data = get_outbreak_data('genomics/prevalence-by-location', query, collect_all=False, verify=verify)
     else:
-        raw_data = get_outbreak_data('genomics/prevalence-by-location', f'pangolin_lineage={query}', collect_all=False)
+        raw_data = get_outbreak_data('genomics/prevalence-by-location', f'pangolin_lineage={query}', collect_all=False, verify=verify)
 
     key_list = raw_data['results']
     key_list = list(key_list)
@@ -400,7 +400,7 @@ def prevalence_by_location(pango_lin, location, mutations=None,  datemin=None, l
     return df
 
 
-def lineage_by_sub_admin(pango_lin, mutations=None, location=None, ndays=0, detected=None, server=server):
+def lineage_by_sub_admin(pango_lin, mutations=None, location=None, ndays=0, detected=None, server=server, verify=False):
     """Cumulative prevalence of a PANGO lineage by the immediate admin level of a location
 
         Arguments:
@@ -432,7 +432,7 @@ def lineage_by_sub_admin(pango_lin, mutations=None, location=None, ndays=0, dete
     if ndays > 0:
         query = query + '&' + f'ndays={ndays}'
         
-    raw_data = get_outbreak_data('genomics/lineage-by-sub-admin-most-recent', f'pangolin_lineage={query}', collect_all=False)
+    raw_data = get_outbreak_data('genomics/lineage-by-sub-admin-most-recent', f'pangolin_lineage={query}', collect_all=False, verify=verify)
     key_list = raw_data['results']
     key_list = list(key_list)
     
@@ -445,7 +445,7 @@ def lineage_by_sub_admin(pango_lin, mutations=None, location=None, ndays=0, dete
     return df
     
 
-def collection_date(pango_lin, mutations=None, location=None, server=server):
+def collection_date(pango_lin, mutations=None, location=None, server=server, verify=False):
     """Most recent collection date by location
 
     Arguments:
@@ -466,14 +466,14 @@ def collection_date(pango_lin, mutations=None, location=None, server=server):
     if location:
         query = query + '&' + f'location_id={location}'
         
-    raw_data = get_outbreak_data('genomics/most-recent-collection-date-by-location', f'pangolin_lineage={query}', collect_all=False)
+    raw_data = get_outbreak_data('genomics/most-recent-collection-date-by-location', f'pangolin_lineage={query}', collect_all=False, verify=verify)
    
     data = {'Values' : raw_data['results']}
     df = pd.DataFrame(data) 
     return df
 
 
-def submission_date(pango_lin, mutations=None, location=None, server=server):
+def submission_date(pango_lin, mutations=None, location=None, server=server, verify=False):
     """Returns the most recent submission date by location
 
      Arguments:
@@ -493,14 +493,14 @@ def submission_date(pango_lin, mutations=None, location=None, server=server):
     if location:
          query = query + '&' + f'location_id={location}'
          
-    raw_data = get_outbreak_data('genomics/most-recent-submission-date-by-location', f'pangolin_lineage={query}', collect_all=False)
+    raw_data = get_outbreak_data('genomics/most-recent-submission-date-by-location', f'pangolin_lineage={query}', collect_all=False, verify=verify)
     
     data = {'Values' : raw_data['results']}
     df = pd.DataFrame(data) 
     return df
  
    
-def mutation_details(mutations, server=server):
+def mutation_details(mutations, server=server, verify=False):
     """ Returns details of a mutation.
     
     Arguments:
@@ -513,7 +513,7 @@ def mutation_details(mutations, server=server):
     elif isinstance(mutations, list):
          mutations = ','.join(mutations)
    
-    raw_data = get_outbreak_data('genomics/mutation-details', f'mutations={mutations}', collect_all=False)
+    raw_data = get_outbreak_data('genomics/mutation-details', f'mutations={mutations}', collect_all=False, verify=verify)
     
     r = raw_data['results']
     keys = list(r[0])
@@ -530,7 +530,7 @@ def mutation_details(mutations, server=server):
     return df
 
 
-def daily_lag(location=None, server=server):
+def daily_lag(location=None, server=server, verify=False):
     """Return the daily lag between collection and submission dates by location
 
     Arguments:
@@ -541,7 +541,7 @@ def daily_lag(location=None, server=server):
     if location:
         query =  '&' + f'location_id={location}'
         
-    raw_data = get_outbreak_data('genomics/collection-submission', query, collect_all=False)
+    raw_data = get_outbreak_data('genomics/collection-submission', query, collect_all=False, verify=verify)
     
     r = raw_data['results']
     
@@ -556,7 +556,7 @@ def daily_lag(location=None, server=server):
     return df
     
 
-def wildcard_lineage(name, server=server):
+def wildcard_lineage(name, server=server, verify=False):
     """Match lineage name using wildcards. 
 
     Arguments:
@@ -564,7 +564,7 @@ def wildcard_lineage(name, server=server):
     :return: A pandas dataframe."""
     
     query = '' + '&' + f'name={name}'
-    raw_data = get_outbreak_data('genomics/lineage', query, collect_all=False)
+    raw_data = get_outbreak_data('genomics/lineage', query, collect_all=False, verify=verify)
     r = raw_data['results']
     
     for i in r: # for each separate result
@@ -580,7 +580,7 @@ def wildcard_lineage(name, server=server):
      
 
 
-def wildcard_location(name, server=server):
+def wildcard_location(name, server=server, verify=False):
     """Match location name using wildcards. 
 
     Arguments:
@@ -588,7 +588,7 @@ def wildcard_location(name, server=server):
     :return: A pandas dataframe."""
     
     query = '' + '&' + f'name={name}'
-    raw_data = get_outbreak_data('genomics/location', query, collect_all=False)
+    raw_data = get_outbreak_data('genomics/location', query, collect_all=False, verify=verify)
     r = raw_data['results']
    
     for i in r: # for each seperate result
@@ -603,7 +603,7 @@ def wildcard_location(name, server=server):
     return df
      
 
-def location_details(location, server=server):
+def location_details(location, server=server, verify=False):
     """Get location details using location ID.
      
     Arguments:
@@ -611,13 +611,13 @@ def location_details(location, server=server):
     :return: Some pandas dataframes."""
    
     query = '' + '&' + f'id={location}'
-    raw_data = get_outbreak_data('genomics/location-lookup', query, collect_all=False)
+    raw_data = get_outbreak_data('genomics/location-lookup', query, collect_all=False, verify=verify)
     data = {'Values' : raw_data['results']}
     df = pd.DataFrame(data) 
     return df
 
     
-def wildcard_mutations(name, server=server):
+def wildcard_mutations(name, server=server, verify=False):
     """Match mutations using wildcards.
     
      Arguments:
@@ -625,7 +625,7 @@ def wildcard_mutations(name, server=server):
      :return: A pandas dataframe."""
 
     query = '' + '&' + f'name={name}'
-    raw_data = get_outbreak_data('genomics/mutations', query, collect_all=False)
+    raw_data = get_outbreak_data('genomics/mutations', query, collect_all=False, verify=verify)
     r = raw_data['results']
     
     for i in r: # for each seperate result
@@ -641,7 +641,7 @@ def wildcard_mutations(name, server=server):
 
 ### Significance API enpoints: ###
     
-def growth_rates(lineage, location='Global'):
+def growth_rates(lineage, location='Global', verify=False):
     """Returns the growth rate score for a given lineage in a given location.
     
      Arguments:
@@ -655,7 +655,7 @@ def growth_rates(lineage, location='Global'):
              locations = '+OR+'.join(location)
     
     query = f'q=lineage:{lineage}+AND+location:{locations}'
-    raw_data = get_outbreak_data('growth_rate/query', query, collect_all=False)
+    raw_data = get_outbreak_data('growth_rate/query', query, collect_all=False, verify=verify)
     df = pd.DataFrame(raw_data['hits'])
     
     return df
@@ -695,7 +695,7 @@ def abundances(df1, site_id=None):
     return ab_formatting(tempdf, df2, done = True)
           
     
-def wastewater_query(region, site_id = None, id_list=False):
+def wastewater_query(region, site_id = None, id_list=False, verify=False):
     """Returns data on lineages including lineage descendants discovered within a state/province-level location.
     
      Arguments:
@@ -710,7 +710,7 @@ def wastewater_query(region, site_id = None, id_list=False):
         
     query = f'q=geo_loc_region:{region}' 
     try:
-        raw_data = get_outbreak_data('wastewater/query', query, server='dev.outbreak.info', collect_all=False)
+        raw_data = get_outbreak_data('wastewater/query', query, server='dev.outbreak.info', collect_all=False, verify=verify)
         df1 = pd.DataFrame(raw_data['hits'])
         if id_list:
            return df1['site_id']
