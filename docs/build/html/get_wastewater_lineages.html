@@ -114,6 +114,17 @@
 <li class="toctree-l1"><a class="reference internal" href="get_wastewater_mutations.html">get_wastewater_mutations</a></li>
 <li class="toctree-l1"><a class="reference internal" href="get_wastewater_samples.html">get_wastewater_samples</a></li>
 <li class="toctree-l1"><a class="reference internal" href="get_wastewater_samples_by_lineage.html">get_wastewater_samples_by_lineage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="get_wastewater_samples_by_mutation.html">get_wastewater_samples_by_mutation</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="cluster_df.html">cluster_df</a></li>
+<li class="toctree-l1"><a class="reference internal" href="const_idx.html">const_idx</a></li>
+<li class="toctree-l1"><a class="reference internal" href="datebin_and_agg.html">datebin_and_agg</a></li>
+<li class="toctree-l1"><a class="reference internal" href="first_date.html">first_date</a></li>
+<li class="toctree-l1"><a class="reference internal" href="get_colors.html">get_colors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="get_riverplot_baseline.html">get_riverplot_baseline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="get_tree.html">get_tree</a></li>
+<li class="toctree-l1"><a class="reference internal" href="get_ww_weights.html">get_ww_weights</a></li>
 </ul>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="epidem_analysis.html">Epidemiological data analyses</a></li>
@@ -198,17 +209,84 @@
 <dd><p>Add wastewater demix results to a DataFrame containing sample IDs.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>input_df</strong> – DataFrame containing metadata.</p>
+<dd class="field-odd"><p><strong>input_df</strong> -- DataFrame containing metadata.</p>
 </dd>
 <dt class="field-even">Returns</dt>
 <dd class="field-even"><p>The input dataframe joined with lineage data columns.</p>
 </dd>
 <dt class="field-odd">Parameter example</dt>
-<dd class="field-odd"><p>{ ‘input_df’: pd.DataFrame({‘sra_accession’: [‘SRR26963071’, ‘SRR25666039’]}), ‘server’: ‘dev.outbreak.info’ }</p>
+<dd class="field-odd"><p>{ 'input_df': pd.DataFrame({'sra_accession': ['SRR26963071', 'SRR25666039']}), 'server': 'dev.outbreak.info' }</p>
 </dd>
 </dl>
 </dd></dl>
 
+<p>Note that this function is used in conjunction with get_wastewater_mutations.</p>
+<p><strong>Example Usage</strong></p>
+<p>Find lineages of samples associated with A --&gt; G base mutations at genome position 1003:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># Collect wastewater mutation data</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">samples</span> <span class="o">=</span> <span class="n">outbreak_data</span><span class="o">.</span><span class="n">get_wastewater_samples_by_mutation</span><span class="p">(</span><span class="n">site</span><span class="o">=</span><span class="mi">1003</span><span class="p">,</span> <span class="n">alt_base</span><span class="o">=</span><span class="s1">&#39;G&#39;</span><span class="p">,</span> <span class="n">server</span><span class="o">=</span><span class="s1">&#39;dev.outbreak.info&#39;</span><span class="p">)</span>
+
+<span class="o">&gt;&gt;&gt;</span> <span class="n">outbreak_data</span><span class="o">.</span><span class="n">get_wastewater_lineages</span><span class="p">(</span><span class="n">samples</span><span class="p">,</span> <span class="n">server</span><span class="o">=</span><span class="s1">&#39;dev.outbreak.info&#39;</span><span class="p">)</span>
+
+                            <span class="n">alt_base</span>  <span class="n">depth</span>  <span class="n">prevalence_x</span> <span class="n">ref_base</span>  <span class="n">site</span>  \
+<span class="n">mutation</span>            <span class="n">lineage</span>
+<span class="mi">1003</span> <span class="n">AND</span> <span class="n">alt_base</span><span class="p">:</span><span class="n">G</span> <span class="n">CK</span><span class="mf">.1.1.1</span>        <span class="n">G</span>     <span class="mi">51</span>      <span class="mf">0.038088</span>        <span class="n">A</span>  <span class="mi">1003</span>
+                    <span class="n">CL</span><span class="mf">.1.3</span>          <span class="n">G</span>     <span class="mi">51</span>      <span class="mf">0.038088</span>        <span class="n">A</span>  <span class="mi">1003</span>
+                    <span class="n">DV</span><span class="mf">.1.1</span>          <span class="n">G</span>     <span class="mi">51</span>      <span class="mf">0.038088</span>        <span class="n">A</span>  <span class="mi">1003</span>
+                    <span class="n">HW</span><span class="mf">.1</span>            <span class="n">G</span>     <span class="mi">51</span>      <span class="mf">0.038088</span>        <span class="n">A</span>  <span class="mi">1003</span>
+                    <span class="n">XBJ</span><span class="mf">.4</span>           <span class="n">G</span>     <span class="mi">51</span>      <span class="mf">0.038088</span>        <span class="n">A</span>  <span class="mi">1003</span>
+<span class="o">...</span>                               <span class="o">...</span>    <span class="o">...</span>           <span class="o">...</span>      <span class="o">...</span>   <span class="o">...</span>
+                    <span class="n">JR</span><span class="mf">.1.1.1</span>        <span class="n">G</span>     <span class="mi">23</span>      <span class="mf">0.273810</span>        <span class="n">A</span>  <span class="mi">1003</span>
+                    <span class="n">JY</span><span class="mf">.1.1</span>          <span class="n">G</span>     <span class="mi">23</span>      <span class="mf">0.273810</span>        <span class="n">A</span>  <span class="mi">1003</span>
+                    <span class="n">KE</span><span class="mf">.3</span>            <span class="n">G</span>     <span class="mi">23</span>      <span class="mf">0.273810</span>        <span class="n">A</span>  <span class="mi">1003</span>
+                    <span class="n">KT</span><span class="mf">.1.1</span>          <span class="n">G</span>     <span class="mi">23</span>      <span class="mf">0.273810</span>        <span class="n">A</span>  <span class="mi">1003</span>
+                    <span class="n">XBB</span><span class="mf">.1.24</span>        <span class="n">G</span>     <span class="mi">23</span>      <span class="mf">0.273810</span>        <span class="n">A</span>  <span class="mi">1003</span>
+
+                             <span class="n">sra_accession</span>        <span class="n">query</span>   <span class="n">coverage</span>  \
+<span class="n">mutation</span>            <span class="n">lineage</span>
+<span class="mi">1003</span> <span class="n">AND</span> <span class="n">alt_base</span><span class="p">:</span><span class="n">G</span> <span class="n">CK</span><span class="mf">.1.1.1</span>   <span class="n">SRR21864715</span>  <span class="n">SRR21864715</span>  <span class="mf">97.555429</span>
+                    <span class="n">CL</span><span class="mf">.1.3</span>     <span class="n">SRR21864715</span>  <span class="n">SRR21864715</span>  <span class="mf">97.555429</span>
+                    <span class="n">DV</span><span class="mf">.1.1</span>     <span class="n">SRR21864715</span>  <span class="n">SRR21864715</span>  <span class="mf">97.555429</span>
+                    <span class="n">HW</span><span class="mf">.1</span>       <span class="n">SRR21864715</span>  <span class="n">SRR21864715</span>  <span class="mf">97.555429</span>
+                    <span class="n">XBJ</span><span class="mf">.4</span>      <span class="n">SRR21864715</span>  <span class="n">SRR21864715</span>  <span class="mf">97.555429</span>
+<span class="o">...</span>                                    <span class="o">...</span>          <span class="o">...</span>        <span class="o">...</span>
+                    <span class="n">JR</span><span class="mf">.1.1.1</span>   <span class="n">SRR25022780</span>  <span class="n">SRR25022780</span>   <span class="mf">9.848510</span>
+                    <span class="n">JY</span><span class="mf">.1.1</span>     <span class="n">SRR25022780</span>  <span class="n">SRR25022780</span>   <span class="mf">9.848510</span>
+                    <span class="n">KE</span><span class="mf">.3</span>       <span class="n">SRR25022780</span>  <span class="n">SRR25022780</span>   <span class="mf">9.848510</span>
+                    <span class="n">KT</span><span class="mf">.1.1</span>     <span class="n">SRR25022780</span>  <span class="n">SRR25022780</span>   <span class="mf">9.848510</span>
+                    <span class="n">XBB</span><span class="mf">.1.24</span>   <span class="n">SRR25022780</span>  <span class="n">SRR25022780</span>   <span class="mf">9.848510</span>
+
+                                                                         <span class="n">crumbs</span>  \
+<span class="n">mutation</span>            <span class="n">lineage</span>
+<span class="mi">1003</span> <span class="n">AND</span> <span class="n">alt_base</span><span class="p">:</span><span class="n">G</span> <span class="n">CK</span><span class="mf">.1.1.1</span>  <span class="p">;</span><span class="n">B</span><span class="p">;</span><span class="n">B</span><span class="mf">.1</span><span class="p">;</span><span class="n">B</span><span class="mf">.1.1</span><span class="p">;</span><span class="n">B</span><span class="mf">.1.1.529</span><span class="p">;</span><span class="n">B</span><span class="mf">.1.1.529.5</span><span class="p">;</span><span class="n">B</span><span class="mf">.1.1.529.5</span><span class="o">...</span>
+                    <span class="n">CL</span><span class="mf">.1.3</span>    <span class="p">;</span><span class="n">B</span><span class="p">;</span><span class="n">B</span><span class="mf">.1</span><span class="p">;</span><span class="n">B</span><span class="mf">.1.1</span><span class="p">;</span><span class="n">B</span><span class="mf">.1.1.529</span><span class="p">;</span><span class="n">B</span><span class="mf">.1.1.529.5</span><span class="p">;</span><span class="n">B</span><span class="mf">.1.1.529.5</span><span class="o">...</span>
+                    <span class="n">DV</span><span class="mf">.1.1</span>    <span class="p">;</span><span class="n">B</span><span class="p">;</span><span class="n">B</span><span class="mf">.1</span><span class="p">;</span><span class="n">B</span><span class="mf">.1.1</span><span class="p">;</span><span class="n">B</span><span class="mf">.1.1.529</span><span class="p">;</span><span class="n">B</span><span class="mf">.1.1.529.2</span><span class="p">;</span><span class="n">B</span><span class="mf">.1.1.529.2</span><span class="o">...</span>
+                    <span class="n">HW</span><span class="mf">.1</span>      <span class="p">;</span><span class="n">XBC</span><span class="p">;</span><span class="n">XBC</span><span class="mf">.1</span><span class="p">;</span><span class="n">XBC</span><span class="mf">.1.6</span><span class="p">;</span><span class="n">XBC</span><span class="mf">.1.6.3</span><span class="p">;</span><span class="n">XBC</span><span class="mf">.1.6.3.1</span><span class="p">;</span><span class="n">HW</span><span class="p">;</span><span class="n">HW</span><span class="mf">.1</span><span class="p">;</span>
+                    <span class="n">XBJ</span><span class="mf">.4</span>                                           <span class="p">;</span><span class="n">XBJ</span><span class="p">;</span><span class="n">XBJ</span><span class="mf">.4</span><span class="p">;</span>
+<span class="o">...</span>                                                                         <span class="o">...</span>
+                    <span class="n">JR</span><span class="mf">.1.1.1</span>  <span class="p">;</span><span class="n">XBB</span><span class="p">;</span><span class="n">XBB</span><span class="mf">.1</span><span class="p">;</span><span class="n">XBB</span><span class="mf">.1.9</span><span class="p">;</span><span class="n">XBB</span><span class="mf">.1.9.2</span><span class="p">;</span><span class="n">XBB</span><span class="mf">.1.9.2.5</span><span class="p">;</span><span class="n">XBB</span><span class="mf">.1</span><span class="o">...</span>
+                    <span class="n">JY</span><span class="mf">.1.1</span>    <span class="p">;</span><span class="n">XBB</span><span class="p">;</span><span class="n">XBB</span><span class="mf">.2</span><span class="p">;</span><span class="n">XBB</span><span class="mf">.2.3</span><span class="p">;</span><span class="n">XBB</span><span class="mf">.2.3.19</span><span class="p">;</span><span class="n">XBB</span><span class="mf">.2.3.19.1</span><span class="p">;</span><span class="n">XBB</span><span class="o">...</span>
+                    <span class="n">KE</span><span class="mf">.3</span>      <span class="p">;</span><span class="n">XBB</span><span class="p">;</span><span class="n">XBB</span><span class="mf">.1</span><span class="p">;</span><span class="n">XBB</span><span class="mf">.1.19</span><span class="p">;</span><span class="n">XBB</span><span class="mf">.1.19.1</span><span class="p">;</span><span class="n">XBB</span><span class="mf">.1.19.1.5</span><span class="p">;</span><span class="n">XB</span><span class="o">...</span>
+                    <span class="n">KT</span><span class="mf">.1.1</span>    <span class="p">;</span><span class="n">XBB</span><span class="p">;</span><span class="n">XBB</span><span class="mf">.2</span><span class="p">;</span><span class="n">XBB</span><span class="mf">.2.3</span><span class="p">;</span><span class="n">XBB</span><span class="mf">.2.3.10</span><span class="p">;</span><span class="n">XBB</span><span class="mf">.2.3.10.1</span><span class="p">;</span><span class="n">XBB</span><span class="o">...</span>
+                    <span class="n">XBB</span><span class="mf">.1.24</span>                               <span class="p">;</span><span class="n">XBB</span><span class="p">;</span><span class="n">XBB</span><span class="mf">.1</span><span class="p">;</span><span class="n">XBB</span><span class="mf">.1.24</span><span class="p">;</span>
+
+                              <span class="n">prevalence_y</span>  <span class="n">spike_coverage</span>
+<span class="n">mutation</span>            <span class="n">lineage</span>
+<span class="mi">1003</span> <span class="n">AND</span> <span class="n">alt_base</span><span class="p">:</span><span class="n">G</span> <span class="n">CK</span><span class="mf">.1.1.1</span>      <span class="mf">0.000530</span>       <span class="mf">98.874935</span>
+                    <span class="n">CL</span><span class="mf">.1.3</span>        <span class="mf">0.000550</span>       <span class="mf">98.874935</span>
+                    <span class="n">DV</span><span class="mf">.1.1</span>        <span class="mf">0.000106</span>       <span class="mf">98.874935</span>
+                    <span class="n">HW</span><span class="mf">.1</span>          <span class="mf">0.000220</span>       <span class="mf">98.874935</span>
+                    <span class="n">XBJ</span><span class="mf">.4</span>         <span class="mf">0.000288</span>       <span class="mf">98.874935</span>
+<span class="o">...</span>                                    <span class="o">...</span>             <span class="o">...</span>
+                    <span class="n">JR</span><span class="mf">.1.1.1</span>      <span class="mf">0.131121</span>        <span class="mf">3.218210</span>
+                    <span class="n">JY</span><span class="mf">.1.1</span>        <span class="mf">0.100538</span>        <span class="mf">3.218210</span>
+                    <span class="n">KE</span><span class="mf">.3</span>          <span class="mf">0.008403</span>        <span class="mf">3.218210</span>
+                    <span class="n">KT</span><span class="mf">.1.1</span>        <span class="mf">0.238095</span>        <span class="mf">3.218210</span>
+                    <span class="n">XBB</span><span class="mf">.1.24</span>      <span class="mf">0.018568</span>        <span class="mf">3.218210</span>
+
+<span class="p">[</span><span class="mi">6085</span> <span class="n">rows</span> <span class="n">x</span> <span class="mi">11</span> <span class="n">columns</span><span class="p">]</span>
+</pre></div>
+</div>
 </section>
 
 

@@ -5,8 +5,7 @@ import pandas as pd
 import numpy as np
 import json
 
-from outbreak_data import *
-
+from outbreak_data import authenticate_user
 
 default_server = 'api.outbreak.info' # or 'dev.outbreak.info'
 print_reqs = False
@@ -104,7 +103,7 @@ def wildcard_location(search, **req_args):
 
      :return: A pandas dataframe containing matching locations and their metadata.
 
-     :Parameter example: { "search": "*awai*" } """
+     :Parameter example: { 'search': '*awai*' } """
     data = _get_outbreak_data('genomics/location', f'name={search}', collect_all=False, **req_args)
     return pd.DataFrame(data['results']).set_index('id')
 def location_details(location, **req_args):
@@ -476,4 +475,7 @@ def get_wastewater_lineages(input_df, **req_args):
      :Parameter example: { 'input_df': pd.DataFrame({'sra_accession': ['SRR26963071', 'SRR25666039']}), 'server': 'dev.outbreak.info' } """
     data = _fetch_ww_data(input_df, 'wastewater_demix/query', **req_args)
     return data.rename(columns={'name': 'lineage'}).set_index('lineage', append=True)
+
+
+l = growth_rates('EG.2')
 

@@ -90,8 +90,8 @@
             
             
               <ul>
-<li class="toctree-l1"><a class="reference internal" href="all_lineage_prevalences.html">all_lineage_prevalences(location, startswith)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="auth_setup.html">authenticate_new_user()</a></li>
+<li class="toctree-l1"><a class="reference internal" href="all_lineage_prevalences.html">all_lineage_prevalences</a></li>
+<li class="toctree-l1"><a class="reference internal" href="auth_setup.html">authenticate_new_user</a></li>
 <li class="toctree-l1"><a class="reference internal" href="cases_by_location.html">cases_by_location</a></li>
 <li class="toctree-l1"><a class="reference internal" href="daily_lag.html">daily_lag</a></li>
 <li class="toctree-l1"><a class="reference internal" href="growth_rates.html">growth_rates</a></li>
@@ -101,8 +101,10 @@
 <li class="toctree-l1"><a class="reference internal" href="lineage_cl_prevalence.html">lineage_cl_prevalence</a></li>
 <li class="toctree-l1"><a class="reference internal" href="most_recent_cl_data.html">most_recent_cl_data</a></li>
 <li class="toctree-l1"><a class="reference internal" href="mutation_details.html">mutation_details</a></li>
+<li class="toctree-l1"><a class="reference internal" href="mutation_prevalences.html">mutation_prevalences</a></li>
 <li class="toctree-l1"><a class="reference internal" href="seq_counts.html">sequence_counts</a></li>
 <li class="toctree-l1"><a class="reference internal" href="wildcard_location.html">wildcard_location</a></li>
+<li class="toctree-l1"><a class="reference internal" href="wildcard_lineage.html">wildcard_lineage</a></li>
 </ul>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="get_wastewater_latest.html">get_wastewater_latest</a></li>
@@ -111,6 +113,17 @@
 <li class="toctree-l1"><a class="reference internal" href="get_wastewater_mutations.html">get_wastewater_mutations</a></li>
 <li class="toctree-l1"><a class="reference internal" href="get_wastewater_samples.html">get_wastewater_samples</a></li>
 <li class="toctree-l1"><a class="reference internal" href="get_wastewater_samples_by_lineage.html">get_wastewater_samples_by_lineage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="get_wastewater_samples_by_mutation.html">get_wastewater_samples_by_mutation</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="cluster_df.html">cluster_df</a></li>
+<li class="toctree-l1"><a class="reference internal" href="const_idx.html">const_idx</a></li>
+<li class="toctree-l1"><a class="reference internal" href="datebin_and_agg.html">datebin_and_agg</a></li>
+<li class="toctree-l1"><a class="reference internal" href="first_date.html">first_date</a></li>
+<li class="toctree-l1"><a class="reference internal" href="get_colors.html">get_colors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="get_riverplot_baseline.html">get_riverplot_baseline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="get_tree.html">get_tree</a></li>
+<li class="toctree-l1"><a class="reference internal" href="get_ww_weights.html">get_ww_weights</a></li>
 </ul>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="epidem_analysis.html">Epidemiological data analyses</a></li>
@@ -191,7 +204,7 @@
 <h1>Tracing Mutations Back to Lineage<a class="headerlink" href="#tracing-mutations-back-to-lineage" title="Permalink to this headline">¶</a></h1>
 <p>The Python Outbreak API can be queried in order to determine which lineages a mutation has been found in. After collecting a sample and determining what sequences are present, we may have a list of several SARS-CoV-2 mutations that we can immediately say are characteristic of a specific variant. However in some cases, we also may have a mutation that is relatively uncommon in most other samples.
 For example, we can look at small data sample consisting of 10 mutations: (S:A67V, S:DEL69/70, S:E484A, S:N501Y, S:T572N, S:D614G, S:G142D  N:S2Y, S:Q52R, E:L21F, S:G593D). We’ll want a way to find more details about any mutation collected, such as whether the mutation has been collected before, when, and where that mutation came from.</p>
-<p>To start, the <code class="docutils literal notranslate"><span class="pre">mutation_prevalences()</span></code> function allows us to look at the clinical prevalence of a mutation and see which lineage it most likely belongs to. Let’s try it for E:L21F:</p>
+<p>To start, the <code class="docutils literal notranslate"><span class="pre">mutation_prevalences()</span></code> function allows us to look at the clinical prevalence of a mutation and see which lineage it most likely belongs to. Let's try it for E:L21F:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># Perform authentication if you haven&#39;t already</span>
 <span class="kn">from</span> <span class="nn">outbreak_data</span> <span class="kn">import</span> <span class="n">authenticate_user</span>
 <span class="n">authenticate_user</span><span class="o">.</span><span class="n">authenticate_new_user</span><span class="p">()</span>

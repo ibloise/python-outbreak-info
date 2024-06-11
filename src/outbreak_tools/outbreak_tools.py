@@ -6,13 +6,15 @@ import gzip
 import yaml
 import json
 
-from outbreak_tools import outbreak_clustering
+import outbreak_clustering
     
 def get_colors(lins, brighten, lineage_key):
     """Heuristically assign colors to lineages to convey divergence.
+
      :param lins: list of (group root) lineage names.
      :param brighten: boolean allowing to brighten some lineages.
      :param lineage_key: dict mapping lineage names to tree nodes.
+
      :return: a list of lineage colors represented as hsv tuples."""
     colors = np.searchsorted(
         sorted([lin['alias'] for lin in lineage_key.values()]),
@@ -23,9 +25,11 @@ def get_colors(lins, brighten, lineage_key):
 
 def get_riverplot_baseline(prevalences, loads, k=128):
     """Find a baseline for drawing a river plot (a shifted scaled stacked area plot) that minimizes visual shear.
-     :param prevalences: pandas df of lineage prevalences over time.
+
+     :param prevalences: pandas df of lineage prevalences over time (See lineage_cl_prevalence())
      :param loads: pandas series of viral loads or other scaling data.
      :param k: number of iterations to run.
+
      :return: a pandas series representing the vertical offset of the bottom edge of the river plot."""
     c = prevalences.mul(loads.interpolate(), axis=0).dropna()
     d = c.div(loads.dropna(), axis=0)
@@ -40,15 +44,19 @@ def get_riverplot_baseline(prevalences, loads, k=128):
 
 def first_date(samples, by='collection_site_id'):
     """Get the earliest date among samples for each unique value in some column.
+
      :param samples: pandas dataframe of samples indexed by date.
      :param by: name of target column.
+
      :return: a pandas series mapping unique values to dates"""
     return samples.reset_index(level=0, names='date').groupby(by)['date'].min()
 
 def get_ww_weights(df, loaded=True):
     """Get default weights for aggregating wastewater data.
+
      :param df: pandas dataframe of samples to be weighted.
      :param loaded: whether to incorporate viral load data.
+
      :return: a pandas series of sample weights."""
     weights = df['ww_population'].fillna(1000)
     if loaded: weights *= df['normed_viral_load'].fillna(0.5)
@@ -56,9 +64,11 @@ def get_ww_weights(df, loaded=True):
 
 def const_idx(df, const, level):
     """Set one level of a multi-indexed df to a constant.
+
      :param df: multi-indexed pandas dataframe.
      :param const: constant value to assign to index.
      :param level: level of index to change.
+
      :return: the modified dataframe."""
     df = df.copy()
     df.index = df.index.set_levels([const]*len(df), level=level, verify_integrity=False)
@@ -66,6 +76,7 @@ def const_idx(df, const, level):
     
 def datebin_and_agg(df, weights=None, freq='7D', rolling=1, startdate=None, enddate=None, column='prevalence', norm=True, variance=False, log=False, trustna=1):
     """Gather and aggregate samples into signals.
+
      :param df: A multi-indexed pandas dataframe; df.index[0] is assumed to be a date and df.index[1] a categorical.
      :param weights: A pandas series of sample weights. `None` is appropriate for clinical df[column] and `get_ww_weights` for wastewater.
      :param freq: Length of date bins as a string.
@@ -77,6 +88,7 @@ def datebin_and_agg(df, weights=None, freq='7D', rolling=1, startdate=None, endd
      :param variance: Whether to return the rolling variances along with the aggregated values.
      :param log: Whether to do the aggregation in log space (geometric vs arithmetic mean).
      :param trustna: How much weight to place on the nan=0 assumption.
+
      :return: A pandas dataframe of aggregated values with rows corresponding to date bins and columns corresponding to categories."""
     if startdate is None: startdate = df.index.get_level_values(0).min()
     if enddate is None: enddate = df.index.get_level_values(0).max()
@@ -122,7 +134,9 @@ def datebin_and_agg(df, weights=None, freq='7D', rolling=1, startdate=None, endd
 
 def get_tree(url='https://raw.githubusercontent.com/outbreak-info/outbreak.info/master/curated_reports_prep/lineages.yml'):
     """Download and parse the lineage tree (derived from the Pangolin project).
+
      :param url: The URL of an outbreak-info lineages.yml file.
+
      :return: A nested tree of frozendicts representing the phylogenetic tree."""
     response = requests.get(url)
     response = yaml.safe_load(response.content.decode("utf-8"))
@@ -149,11 +163,13 @@ def read_compressed_tree(file='./tree.json.gz'):
         
 def cluster_df(df, clusters, tree, lineage_key=None, norm=True):
     """Aggregate the columns of a dataframe into some phylogenetic groups.
+
      :param df: A dataframe of prevalence signals. Rows are assumed to be date bins and columns are assumed to be lineages.
      :param clusters: A tuple (U,V) of sets of root nodes representing clusters (from cluster_lineages).
      :param tree: A frozendict representing the root of the phylo tree object.
      :param lineage_key: An OrderedDict mapping names to tree nodes.
      :param norm: Whether to assume that values in a row should sum to one.
+
      :return: A tuple (data,names,is_inclusive) where data is the input dataframe with aggregated and relabeled columns, names contains the names of the root lineages for each column/group, and is_inclusive indicates whether the column's root is in U or V."""
     if lineage_key is None: tree = get_lineage_key(tree)
     (U,V) = clusters

@@ -114,6 +114,17 @@
 <li class="toctree-l1"><a class="reference internal" href="get_wastewater_mutations.html">get_wastewater_mutations</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">get_wastewater_samples</a></li>
 <li class="toctree-l1"><a class="reference internal" href="get_wastewater_samples_by_lineage.html">get_wastewater_samples_by_lineage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="get_wastewater_samples_by_mutation.html">get_wastewater_samples_by_mutation</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="cluster_df.html">cluster_df</a></li>
+<li class="toctree-l1"><a class="reference internal" href="const_idx.html">const_idx</a></li>
+<li class="toctree-l1"><a class="reference internal" href="datebin_and_agg.html">datebin_and_agg</a></li>
+<li class="toctree-l1"><a class="reference internal" href="first_date.html">first_date</a></li>
+<li class="toctree-l1"><a class="reference internal" href="get_colors.html">get_colors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="get_riverplot_baseline.html">get_riverplot_baseline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="get_tree.html">get_tree</a></li>
+<li class="toctree-l1"><a class="reference internal" href="get_ww_weights.html">get_ww_weights</a></li>
 </ul>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="epidem_analysis.html">Epidemiological data analyses</a></li>
@@ -199,26 +210,65 @@
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>country</strong> – String containing name of country to search within.</p></li>
-<li><p><strong>region</strong> – String containing name of region to search within.</p></li>
-<li><p><strong>collection_site_id</strong> – ID of collection site.</p></li>
-<li><p><strong>date_range</strong> – Date range in the format [start_date, end_date], with dates in YYYY-MM-DD.</p></li>
-<li><p><strong>sra_ids</strong> – List of sample IDs.</p></li>
-<li><p><strong>viral_load_at_least</strong> – Minimum viral load threshold for matching samples.</p></li>
-<li><p><strong>population_at_least</strong> – Minimum population threshold for matching samples.</p></li>
-<li><p><strong>demix_success</strong> – Whether to gather only samples with valid lineage mix data.</p></li>
-<li><p><strong>variants_success</strong> – Whether to gather only samples with valid mutation data.</p></li>
+<li><p><strong>country</strong> -- String containing name of country to search within.</p></li>
+<li><p><strong>region</strong> -- String containing name of region to search within.</p></li>
+<li><p><strong>collection_site_id</strong> -- ID of collection site.</p></li>
+<li><p><strong>date_range</strong> -- Date range in the format [start_date, end_date], with dates in YYYY-MM-DD.</p></li>
+<li><p><strong>sra_ids</strong> -- List of sample IDs.</p></li>
+<li><p><strong>viral_load_at_least</strong> -- Minimum viral load threshold for matching samples.</p></li>
+<li><p><strong>population_at_least</strong> -- Minimum population threshold for matching samples.</p></li>
+<li><p><strong>demix_success</strong> -- Whether to gather only samples with valid lineage mix data.</p></li>
+<li><p><strong>variants_success</strong> -- Whether to gather only samples with valid mutation data.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns</dt>
 <dd class="field-even"><p>A pandas dataframe containing the IDs and metadata of matching samples.</p>
 </dd>
 <dt class="field-odd">Parameter example</dt>
-<dd class="field-odd"><p>{ ‘region’: ‘Ohio’, ‘date_range’: [‘2023-06-01’, ‘2023-12-31’], ‘server’: ‘dev.outbreak.info’ }</p>
+<dd class="field-odd"><p>{ 'region': 'Ohio', 'date_range': ['2023-06-01', '2023-12-31'], 'server': 'dev.outbreak.info' }</p>
 </dd>
 </dl>
 </dd></dl>
 
+<p><strong>Example Usage</strong></p>
+<p>Find wastewater sample data at a specified collection site and minimum viral_load between 2023-09-01 to the last date for wastewater data collection in Ohio:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># Use get_wastewater_latest() to get the last collection date for wastewater data</span>
+
+<span class="o">&gt;&gt;&gt;</span> <span class="n">last_ww_date</span> <span class="o">=</span> <span class="n">latest_ww_date</span> <span class="o">=</span> <span class="n">outbreak_data</span><span class="o">.</span><span class="n">get_wastewater_latest</span><span class="p">(</span><span class="n">region</span><span class="o">=</span><span class="s2">&quot;Ohio&quot;</span><span class="p">,</span> <span class="n">server</span><span class="o">=</span><span class="s1">&#39;dev.outbreak.info&#39;</span><span class="p">)</span>
+
+<span class="o">&gt;&gt;&gt;</span> <span class="n">outbreak_data</span><span class="o">.</span><span class="n">get_wastewater_samples</span><span class="p">(</span><span class="n">collection_site_id</span><span class="o">=</span><span class="s2">&quot;USA_OH_5f9e5487&quot;</span><span class="p">,</span> <span class="n">viral_load_at_least</span><span class="o">=</span><span class="mi">25000</span><span class="p">,</span> <span class="n">date_range</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;2023-09-01&quot;</span><span class="p">,</span> <span class="n">last_ww_date</span><span class="p">],</span> <span class="n">server</span><span class="o">=</span><span class="s1">&#39;dev.outbreak.info&#39;</span><span class="p">)</span>
+
+                <span class="n">collection_site_id</span>  \
+<span class="n">collection_date</span>
+<span class="mi">2023</span><span class="o">-</span><span class="mi">09</span><span class="o">-</span><span class="mi">06</span>         <span class="n">USA_OH_5f9e5487</span>
+<span class="mi">2023</span><span class="o">-</span><span class="mi">09</span><span class="o">-</span><span class="mi">25</span>         <span class="n">USA_OH_5f9e5487</span>
+<span class="mi">2023</span><span class="o">-</span><span class="mi">09</span><span class="o">-</span><span class="mi">18</span>         <span class="n">USA_OH_5f9e5487</span>
+
+                                                <span class="n">coverage_intervals</span>  \
+<span class="n">collection_date</span>
+<span class="mi">2023</span><span class="o">-</span><span class="mi">09</span><span class="o">-</span><span class="mi">06</span>       <span class="p">[[</span><span class="mi">34</span><span class="p">,</span> <span class="mi">2243</span><span class="p">],</span> <span class="p">[</span><span class="mi">2491</span><span class="p">,</span> <span class="mi">2877</span><span class="p">],</span> <span class="p">[</span><span class="mi">3083</span><span class="p">,</span> <span class="mi">3485</span><span class="p">],</span> <span class="p">[</span><span class="mf">4625.</span><span class="o">..</span>
+<span class="mi">2023</span><span class="o">-</span><span class="mi">09</span><span class="o">-</span><span class="mi">25</span>       <span class="p">[[</span><span class="mi">970</span><span class="p">,</span> <span class="mi">1333</span><span class="p">],</span> <span class="p">[</span><span class="mi">1566</span><span class="p">,</span> <span class="mi">1921</span><span class="p">],</span> <span class="p">[</span><span class="mi">2184</span><span class="p">,</span> <span class="mi">2540</span><span class="p">],</span> <span class="p">[</span><span class="mf">310.</span><span class="o">..</span>
+<span class="mi">2023</span><span class="o">-</span><span class="mi">09</span><span class="o">-</span><span class="mi">18</span>       <span class="p">[[</span><span class="mi">670</span><span class="p">,</span> <span class="mi">1013</span><span class="p">],</span> <span class="p">[</span><span class="mi">1566</span><span class="p">,</span> <span class="mi">1921</span><span class="p">],</span> <span class="p">[</span><span class="mi">2512</span><span class="p">,</span> <span class="mi">3765</span><span class="p">],</span> <span class="p">[</span><span class="mf">402.</span><span class="o">..</span>
+
+                 <span class="n">demix_success</span> <span class="n">geo_loc_country</span> <span class="n">geo_loc_region</span> <span class="n">sra_accession</span>  \
+<span class="n">collection_date</span>
+<span class="mi">2023</span><span class="o">-</span><span class="mi">09</span><span class="o">-</span><span class="mi">06</span>                <span class="kc">True</span>             <span class="n">USA</span>           <span class="n">Ohio</span>   <span class="n">SRR26133858</span>
+<span class="mi">2023</span><span class="o">-</span><span class="mi">09</span><span class="o">-</span><span class="mi">25</span>                <span class="kc">True</span>             <span class="n">USA</span>           <span class="n">Ohio</span>   <span class="n">SRR26549478</span>
+<span class="mi">2023</span><span class="o">-</span><span class="mi">09</span><span class="o">-</span><span class="mi">18</span>                <span class="kc">True</span>             <span class="n">USA</span>           <span class="n">Ohio</span>   <span class="n">SRR26549479</span>
+
+                 <span class="n">variants_success</span>  <span class="n">viral_load</span>  <span class="n">ww_population</span>  \
+<span class="n">collection_date</span>
+<span class="mi">2023</span><span class="o">-</span><span class="mi">09</span><span class="o">-</span><span class="mi">06</span>                   <span class="kc">True</span>     <span class="mf">98147.5</span>         <span class="mi">226729</span>
+<span class="mi">2023</span><span class="o">-</span><span class="mi">09</span><span class="o">-</span><span class="mi">25</span>                   <span class="kc">True</span>     <span class="mf">51116.0</span>         <span class="mi">226729</span>
+<span class="mi">2023</span><span class="o">-</span><span class="mi">09</span><span class="o">-</span><span class="mi">18</span>                   <span class="kc">True</span>     <span class="mf">40253.0</span>         <span class="mi">226729</span>
+
+                 <span class="n">normed_viral_load</span>
+<span class="n">collection_date</span>
+<span class="mi">2023</span><span class="o">-</span><span class="mi">09</span><span class="o">-</span><span class="mi">06</span>                <span class="mf">3.189438</span>
+<span class="mi">2023</span><span class="o">-</span><span class="mi">09</span><span class="o">-</span><span class="mi">25</span>                <span class="mf">1.661085</span>
+<span class="mi">2023</span><span class="o">-</span><span class="mi">09</span><span class="o">-</span><span class="mi">18</span>                <span class="mf">1.308077</span>
+</pre></div>
+</div>
 </section>
 
 
