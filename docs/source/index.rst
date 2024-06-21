@@ -109,14 +109,19 @@ Plotting and Organization Toolkit
 ----------------------------------
 .. toctree::
    cluster_df
+   cluster_lineages
    const_idx
    datebin_and_agg
    first_date
+   gather_groups
+   get_agg_prevalence
    get_colors
+   get_compressed_tree
+   get_lineage_key
    get_riverplot_baseline
    get_tree
    get_ww_weights
-
+  
 
 Example Applications and Analyses
 ----------------------------------

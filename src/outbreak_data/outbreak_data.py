@@ -476,6 +476,3 @@ def get_wastewater_lineages(input_df, **req_args):
     data = _fetch_ww_data(input_df, 'wastewater_demix/query', **req_args)
     return data.rename(columns={'name': 'lineage'}).set_index('lineage', append=True)
 
-
-l = growth_rates('EG.2')
-
