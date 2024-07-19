@@ -97,7 +97,7 @@ def get_descendants(node):
     """Get the set of all descendants of some node."""
     return set(node['children']) | set.union(*[get_descendants(c) for c in node['children']]) if len(node['children']) > 0 else set([])
 
-def (clusters, prevalences, count_scores = tuple([0.1, 4, 4, 4, 0.1] + [0] * 256)):
+def gather_groups(clusters, prevalences, count_scores = tuple([0.1, 4, 4, 4, 0.1] + [0] * 256)):
     """Greedily aggregate groups into meta-groups based on some heuristics.
      
      :param clusters: A tuple (U,V) of sets of root nodes representing clusters (from cluster_lineages).
