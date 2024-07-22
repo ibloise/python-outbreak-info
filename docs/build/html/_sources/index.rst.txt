@@ -61,67 +61,73 @@ For wastewater abundance analyses, users will need to supply the appropriate loc
 
 **About Clinical and Wastewater Tools**
 
-Toward the beginning of the SARS-Cov-2 pandemic, viral genome sequencing data were collected through specimens that were obtained from clinical testing. Yet studies have shown that the method has introduced sampling bias due to systemic healthcare disparities, particularly in poor and underserved communities. 
+Toward the beginning of the SARS-Cov-2 pandemic, viral genome sequencing data were collected through specimens that were obtained from clinical testing. Yet studies have shown that the method has introduced sampling bias due to systemic healthcare disparities, particularly in poor and underserved communities. In contrast, wastewater samples have been highly useful for tracking regional infection dynamics while providing less biased abundance estimates than clinical testing. Data collected by tracking viral genomic sequences in wastewater has also improved community prevalence estimates and detects emerging variants earlier on. 
 
-In contrast, wastewater samples have been highly useful for tracking regional infection dynamics while providing less biased abundance estimates than clinical testing. Data collected by tracking viral genomic sequences in wastewater has also improved community prevalence estimates and detects emerging variants earlier on. 
+In clinical genomic data, each sample contains one sequence, allowing us to see whether two or more mutations occur frequently together. However, wastewater data samples contain a mix of sequences, and it's unclear which mutations go with which variants exactly. Analyzing clinical data would then be needed to answer co-occurence questions.
 
-The Andersen Lab has developed improved virus concentration protocols and deconvolution software that fully resolve multiple virus strains from wastewater. The resulting data is now deployed by Python-outbreak-info. In short, SARS-Cov-2 analysis can be done using both clinical and wastewater tools, yet data from the wastewater analysis tools may be more accurate in some situations.
+The Andersen Lab has developed improved virus concentration protocols and deconvolution software that fully resolve multiple virus strains from wastewater. The resulting data is now deployed by Python-outbreak-info. In short, SARS-Cov-2 analysis should be done using both clinical and wastewater tools in order to see the full picture in viral genomic data.
 
-`Click here: <https://www.nature.com/articles/s41586-022-05049-6>`_ for more information on wastewater analysis.
+`Click here <https://www.nature.com/articles/s41586-022-05049-6>`_ for more information on wastewater analysis.
 
 
 Table of Contents:
 ===================
 
-
-Core Outbreak Data Tools
---------------------------
+User Authentication (*outbreak_data.authenticate_user*)
+--------------------------------------------------------
 .. toctree::
-   all_lineage_prevalences
-   auth_setup
-   cases_by_location
-   daily_lag
-   growth_rates
-   gr_significance
-   known_mutations
-   lineage_by_sub_admin
-   lineage_cl_prevalence
-   most_recent_cl_data
-   mutation_details
-   mutation_prevalences
-   seq_counts
-   wildcard_location
-   wildcard_lineage
+   authenticate_user.authenticate_new_user <authenticate_new_user>
 
-Wastewater Analysis Tools
---------------------------
+Core Outbreak Data Tools (*outbreak_data.outbreak_data*)
+---------------------------------------------------------
 .. toctree::
-   get_wastewater_latest
-   get_wastewater_lineages
-   get_wastewater_metadata
-   get_wastewater_mutations
-   get_wastewater_samples
-   get_wastewater_samples_by_lineage
-   get_wastewater_samples_by_mutation
+   outbreak_data.all_lineage_prevalences <all_lineage_prevalences>
+   outbreak_data.cases_by_location <cases_by_location>
+   outbreak_data.daily_lag <daily_lag>
+   outbreak_data.growth_rates <growth_rates>
+   outbreak_data.gr_significance <gr_significance>
+   outbreak_data.known_mutations <known_mutations>
+   outbreak_data.lineage_by_sub_admin <lineage_by_sub_admin>
+   outbreak_data.lineage_cl_prevalence <lineage_cl_prevalence>
+   outbreak_data.most_recent_cl_data <most_recent_cl_data>
+   outbreak_data.mutation_details <mutation_details>
+   outbreak_data.mutation_prevalences <mutation_prevalences>
+   outbreak_data.sequence_counts <seq_counts>
+   outbreak_data.wildcard_location <wildcard_location>
+   outbreak_data.wildcard_lineage <wildcard_lineage>
 
-
-Plotting and Organization Toolkit
-----------------------------------
+Wastewater Analysis Tools (*outbreak_data.outbreak_data*)
+-----------------------------------------------------------
 .. toctree::
-   cluster_df
-   cluster_lineages
-   const_idx
-   datebin_and_agg
-   first_date
-   gather_groups
-   get_agg_prevalence
-   get_colors
-   get_compressed_tree
-   get_lineage_key
-   get_riverplot_baseline
-   get_tree
-   get_ww_weights
-  
+   outbreak_data.get_wastewater_latest <get_wastewater_latest>
+   outbreak_data.get_wastewater_lineages <get_wastewater_lineages>
+   outbreak_data.get_wastewater_metadata <get_wastewater_metadata>
+   outbreak_data.get_wastewater_mutations <get_wastewater_mutations>
+   outbreak_data.get_wastewater_samples <get_wastewater_samples>
+   outbreak_data.get_wastewater_samples_by_lineage <get_wastewater_samples_by_lineage>
+   outbreak_data.get_wastewater_samples_by_mutation <get_wastewater_samples_by_mutation>
+
+
+Plotting and Organization Toolkit (*outbreak_tools.outbreak_tools*)
+---------------------------------------------------------------------
+.. toctree::
+   outbreak_tools.cluster_df <cluster_df>
+   outbreak_tools.const_idx <const_idx>
+   outbreak_tools.datebin_and_agg <datebin_and_agg>
+   outbreak_tools.first_date <first_date>
+   outbreak_tools.get_colors <get_colors>
+   outbreak_tools.get_riverplot_baseline <get_riverplot_baseline>
+   outbreak_tools.get_tree <get_tree>
+   outbreak_tools.get_ww_weights <get_ww_weights>
+ 
+Lineage Clustering (*outbreak_tools.outbreak_clustering*)
+----------------------------------------------------------
+.. toctree::
+   outbreak_clustering.cluster_lineages <cluster_lineages>
+   outbreak_clustering.gather_groups <gather_groups>
+   outbreak_clustering.get_agg_prevalence <get_agg_prevalence>
+   outbreak_clustering.get_compressed_tree <get_compressed_tree>
+   outbreak_clustering.get_lineage_key <get_lineage_key>
 
 Example Applications and Analyses
 ----------------------------------

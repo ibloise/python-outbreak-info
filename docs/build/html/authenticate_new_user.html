@@ -8,7 +8,7 @@
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   
-  <title>get_wastewater_latest &mdash; Python Outbreak.info API 0.1 documentation</title>
+  <title>authenticate_new_user &mdash; Python Outbreak.info API 0.1 documentation</title>
   
 
   
@@ -44,8 +44,8 @@
     
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="get_wastewater_lineages" href="get_wastewater_lineages.html" />
-    <link rel="prev" title="wildcard_lineage" href="wildcard_lineage.html" /> 
+    <link rel="next" title="all_lineage_prevalences" href="all_lineage_prevalences.html" />
+    <link rel="prev" title="Welcome to the Python Outbreak.info package docs!" href="index.html" /> 
 </head>
 
 <body class="wy-body-for-nav">
@@ -90,14 +90,17 @@
               
             
             
-              <ul>
+              <ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">authenticate_user.authenticate_new_user</a></li>
+</ul>
+<ul>
 <li class="toctree-l1"><a class="reference internal" href="all_lineage_prevalences.html">outbreak_data.all_lineage_prevalences</a></li>
-<li class="toctree-l1"><a class="reference internal" href="auth_setup.html">outbreak_data.auth_setup</a></li>
 <li class="toctree-l1"><a class="reference internal" href="cases_by_location.html">outbreak_data.cases_by_location</a></li>
 <li class="toctree-l1"><a class="reference internal" href="daily_lag.html">outbreak_data.daily_lag</a></li>
 <li class="toctree-l1"><a class="reference internal" href="growth_rates.html">outbreak_data.growth_rates</a></li>
 <li class="toctree-l1"><a class="reference internal" href="gr_significance.html">outbreak_data.gr_significance</a></li>
 <li class="toctree-l1"><a class="reference internal" href="known_mutations.html">outbreak_data.known_mutations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="lineage_by_sub_admin.html">outbreak_data.lineage_by_sub_admin</a></li>
 <li class="toctree-l1"><a class="reference internal" href="lineage_cl_prevalence.html">outbreak_data.lineage_cl_prevalence</a></li>
 <li class="toctree-l1"><a class="reference internal" href="most_recent_cl_data.html">outbreak_data.most_recent_cl_data</a></li>
 <li class="toctree-l1"><a class="reference internal" href="mutation_details.html">outbreak_data.mutation_details</a></li>
@@ -106,8 +109,8 @@
 <li class="toctree-l1"><a class="reference internal" href="wildcard_location.html">outbreak_data.wildcard_location</a></li>
 <li class="toctree-l1"><a class="reference internal" href="wildcard_lineage.html">outbreak_data.wildcard_lineage</a></li>
 </ul>
-<ul class="current">
-<li class="toctree-l1 current"><a class="current reference internal" href="#">outbreak_data.get_wastewater_latest</a></li>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="get_wastewater_latest.html">outbreak_data.get_wastewater_latest</a></li>
 <li class="toctree-l1"><a class="reference internal" href="get_wastewater_lineages.html">outbreak_data.get_wastewater_lineages</a></li>
 <li class="toctree-l1"><a class="reference internal" href="get_wastewater_metadata.html">outbreak_data.get_wastewater_metadata</a></li>
 <li class="toctree-l1"><a class="reference internal" href="get_wastewater_mutations.html">outbreak_data.get_wastewater_mutations</a></li>
@@ -188,13 +191,13 @@
     
       <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
         
-      <li>get_wastewater_latest</li>
+      <li>authenticate_new_user</li>
     
     
       <li class="wy-breadcrumbs-aside">
         
           
-            <a href="_sources/get_wastewater_latest.rst.txt" rel="nofollow"> View page source</a>
+            <a href="_sources/authenticate_new_user.rst.txt" rel="nofollow"> View page source</a>
           
         
       </li>
@@ -207,28 +210,17 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <section id="get-wastewater-latest">
-<h1>get_wastewater_latest<a class="headerlink" href="#get-wastewater-latest" title="Permalink to this headline">¶</a></h1>
+  <section id="authenticate-new-user">
+<h1>authenticate_new_user<a class="headerlink" href="#authenticate-new-user" title="Permalink to this headline">¶</a></h1>
 <dl class="py function">
-<dt class="sig sig-object py" id="outbreak_data.get_wastewater_latest">
-<span class="sig-prename descclassname"><span class="pre">outbreak_data.</span></span><span class="sig-name descname"><span class="pre">get_wastewater_latest</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#outbreak_data.get_wastewater_latest" title="Permalink to this definition">¶</a></dt>
-<dd><p>Get date of latest wastewater sample matching a given query. Same parameters as <cite>get_wastewater_samples</cite>.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Returns</dt>
-<dd class="field-odd"><p>The date of the most recent matching sample in YYYY-MM-DD.</p>
-</dd>
-<dt class="field-even">Parameter example</dt>
-<dd class="field-even"><p>{ 'region': 'Ohio', 'server': 'dev.outbreak.info' }</p>
-</dd>
-</dl>
+<dt class="sig sig-object py" id="authenticate_user.authenticate_new_user">
+<span class="sig-prename descclassname"><span class="pre">authenticate_user.</span></span><span class="sig-name descname"><span class="pre">authenticate_new_user</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#authenticate_user.authenticate_new_user" title="Permalink to this definition">¶</a></dt>
+<dd><p>Authenticate a user for genomics API access.</p>
 </dd></dl>
 
-<p><strong>Example Usage</strong></p>
-<p>Get the most recent date for wastewater data collection in Ohio:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">outbreak_data</span><span class="o">.</span><span class="n">get_wastewater_latest</span><span class="p">(</span><span class="n">region</span><span class="o">=</span><span class="s2">&quot;Ohio&quot;</span><span class="p">,</span> <span class="n">server</span><span class="o">=</span><span class="s1">&#39;dev.outbreak.info&#39;</span><span class="p">)</span>
-
-<span class="go">[Out]: &#39;2023-10-01&#39;</span>
-</pre></div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Please note that authentication is required to access clinical data endpoints. Wastewater data endpoints do not apply. A web browser is required for authentication. The user's authentication token is saved locally between runs and in most cases only needs to be run once.</p>
 </div>
 </section>
 
@@ -238,8 +230,8 @@
           </div>
           <footer>
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
-        <a href="get_wastewater_lineages.html" class="btn btn-neutral float-right" title="get_wastewater_lineages" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
-        <a href="wildcard_lineage.html" class="btn btn-neutral float-left" title="wildcard_lineage" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="all_lineage_prevalences.html" class="btn btn-neutral float-right" title="all_lineage_prevalences" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="index.html" class="btn btn-neutral float-left" title="Welcome to the Python Outbreak.info package docs!" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
     </div>
 
   <hr/>
