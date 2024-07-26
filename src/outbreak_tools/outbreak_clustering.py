@@ -32,7 +32,7 @@ def cluster_lineages(prevalences, tree, lineage_key=None, n=10, alpha=0.15):
      :param tree: A frozendict representing the root of the phylo tree object.
      :param lineage_key: An OrderedDict mapping names to tree nodes.
      :param n: The target number of clusters.
-     :param alpha. Heuristic control in range (0, 1); higher values avoid more low-quality groups, but can prevent convergence on some data.
+     :param alpha: Heuristic control in range (0, 1); higher values avoid more low-quality groups, but can prevent convergence on some data.
      
      :return: A tuple (U,V) of sets of group root lineages. Groups in U contain all descendant lineages of their roots, while groups in V are exclusive of some more distal groups in U or V."""
     if lineage_key is None: lineage_key = get_lineage_key(tree)
@@ -74,6 +74,7 @@ def cluster_lineages(prevalences, tree, lineage_key=None, n=10, alpha=0.15):
                 update_ancestors(drop_node, agg_prevalences[drop_node['lindex']], U|V)
     return U,V
 
+
 def get_agg_prevalence(root, prevalences, W=set([])):
     """Compute the total prevalence of all lineages in a group.
      
@@ -97,7 +98,7 @@ def get_descendants(node):
     """Get the set of all descendants of some node."""
     return set(node['children']) | set.union(*[get_descendants(c) for c in node['children']]) if len(node['children']) > 0 else set([])
 
-def gather_groups(clusters, prevalences, count_scores = tuple([0.1, 4, 4, 4, 0.1] + [0] * 256)):
+def gather_groups(clusters, prevalences, count_scores=tuple([0.1, 4, 4, 4, 0.1] + [0] * 256)):
     """Greedily aggregate groups into meta-groups based on some heuristics.
      
      :param clusters: A tuple (U,V) of sets of root nodes representing clusters (from cluster_lineages).

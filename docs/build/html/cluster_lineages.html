@@ -223,13 +223,11 @@
 <li><p><strong>tree</strong> -- A frozendict representing the root of the phylo tree object.</p></li>
 <li><p><strong>lineage_key</strong> -- An OrderedDict mapping names to tree nodes.</p></li>
 <li><p><strong>n</strong> -- The target number of clusters.</p></li>
+<li><p><strong>alpha</strong> -- Heuristic control in range (0, 1); higher values avoid more low-quality groups, but can prevent convergence on some data.</p></li>
 </ul>
 </dd>
-</dl>
-<p>:param alpha. Heuristic control in range (0, 1); higher values avoid more low-quality groups, but can prevent convergence on some data.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Returns</dt>
-<dd class="field-odd"><p>A tuple (U,V) of sets of group root lineages. Groups in U contain all descendant lineages of their roots, while groups in V are exclusive of some more distal groups in U or V.</p>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>A tuple (U,V) of sets of group root lineages. Groups in U contain all descendant lineages of their roots, while groups in V are exclusive of some more distal groups in U or V.</p>
 </dd>
 </dl>
 </dd></dl>

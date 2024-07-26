@@ -5,7 +5,7 @@ import pandas as pd
 import numpy as np
 import json
 
-from outbreak_data import authenticate_user
+from outbrak_data import authenticate_user
 
 default_server = 'api.outbreak.info' # or 'dev.outbreak.info'
 print_reqs = False
