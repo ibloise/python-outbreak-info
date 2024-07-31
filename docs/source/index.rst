@@ -69,6 +69,15 @@ The Andersen Lab has developed improved virus concentration protocols and deconv
 
 `Click here <https://www.nature.com/articles/s41586-022-05049-6>`_ for more information on wastewater analysis.
 
+**Example Analysis Workflows**
+
+`Wastewater and Clinical single-lineage prevalence comparison. <https://github.com/outbreak-info/python-outbreak-info/blob/new_docs/tests/figC.ipynb>`_
+
+`Wastewater and Clinical multi-lineage prevalence comparison. <https://github.com/outbreak-info/python-outbreak-info/blob/new_docs/tests/figAB.ipynb>`_
+
+`Wastewater viral load and Clinical test positivity comparison. <https://github.com/outbreak-info/python-outbreak-info/blob/new_docs/tests/figD.ipynb>`_
+
+`Wastewater and Clinical mutation prevalence comparison. <https://github.com/outbreak-info/python-outbreak-info/blob/new_docs/tests/figE.ipynb>`_
 
 Table of Contents:
 ===================
@@ -114,6 +123,7 @@ Plotting and Organization Toolkit (*outbreak_tools.outbreak_tools*)
    outbreak_tools.cluster_df <cluster_df>
    outbreak_tools.const_idx <const_idx>
    outbreak_tools.datebin_and_agg <datebin_and_agg>
+   outbreak_tools.infer_mutations <infer_mutations>
    outbreak_tools.first_date <first_date>
    outbreak_tools.get_colors <get_colors>
    outbreak_tools.get_riverplot_baseline <get_riverplot_baseline>
