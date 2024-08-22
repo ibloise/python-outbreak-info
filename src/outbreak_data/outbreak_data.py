@@ -5,7 +5,7 @@ import pandas as pd
 import numpy as np
 import json
 
-from outbrak_data import authenticate_user
+from outbreak_data import authenticate_user
 
 default_server = 'api.outbreak.info' # or 'dev.outbreak.info'
 print_reqs = False
@@ -247,8 +247,11 @@ def lineage_cl_prevalence( pango_lin, descendants=False, location=None, mutation
     query += f'&cumulative={_lboolstr(cumulative)}'
     if datemin is not None: query += f'&min_date={datemin}'
     if datemax is not None: query += f'&max_date={datemax}'
-    data = _get_outbreak_data('genomics/prevalence-by-location', query, collect_all=False, **req_args)
-    return pd.DataFrame(data['results']) if cumulative else _multiquery_to_df(data).set_index(['date', 'query'])
+     try:
+        data = _get_outbreak_data('genomics/prevalence-by-location', query, collect_all=False, **req_args)
+        return pd.DataFrame(data['results']) if cumulative else _multiquery_to_df(data).set_index(['date'])
+    except KeyError:
+        print(f' No results for lineage "{pango_lin}" could be found for this location.')
 def prevalence_by_location(pango_lin, **kwargs):
     return lineage_cl_prevalence(pango_lin, **kwargs)
 def global_prevalence(pango_lin, **kwargs):
