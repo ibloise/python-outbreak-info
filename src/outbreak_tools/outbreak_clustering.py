@@ -5,7 +5,7 @@ import gzip
 import json
 from collections import OrderedDict
 
-def get_compressed_tree(url='https://raw.githubusercontent.com/outbreak-info/python-outbreak-info/wastewater_sprint/tree.json.gz'):
+def get_compressed_tree(url='https://raw.githubusercontent.com/outbreak-info/python-outbreak-info/new_docs/tree.json.gz'):
     """Download the pre-parsed lineage tree (derived from the Pangolin project).
      
      :param url: The URL of the json tree file.
