@@ -21,8 +21,11 @@ def _pangolin_crumbs(pango_lin, lin_prefix=True):
 def _multiquery_to_df(data):
     return pd.concat([pd.DataFrame(v).assign(query=k) for k,v in data['results'].items()], axis=0)
 
-def _lin_or_descendants(pango_lin, descendants, join=','):
-    if descendants: query = _pangolin_crumbs(pango_lin)
+def _lin_or_descendants(pango_lin, descendants, lineage_key, join=','):
+    if descendants:
+        if lineage_key and pango_lin in lineage_key: pango_lin = lineage_key[pango_lin]['alias']
+        if not lineage_key: warnings.warn('without the lineage_key parameter, descendant queries on aliased lineages with aliased children (eg JN.1 and KP.1) will not be accurate.')
+        query = _pangolin_crumbs(pango_lin)
     else: query = f'pangolin_lineage={join.join(_list_if_str(pango_lin))}'
     return query
 
@@ -70,7 +73,7 @@ def _get_outbreak_data(endpoint, argstring, server=None, auth=None, collect_all=
                                         collect_all=True, curr_page=curr_page+1 )
             for k in json_data.keys(): json_data[k].extend(next_page.get(k) or [])
     return json_data
-    
+
 def mutation_details(mutations, **req_args):
     """Get details of one or more mutations from clinical data.
 
@@ -184,7 +187,7 @@ def sequence_counts(location=None, sub_admin=False, **req_args):
     data = pd.DataFrame(_get_outbreak_data('genomics/sequence-count', query, **req_args)['results'])
     return data.set_index('location_id' if sub_admin else 'date')
 
-def known_mutations(pango_lin=None, descendants=False, mutations=None, freq=0.8, **req_args):
+def known_mutations(pango_lin=None, descendants=False, mutations=None, lineage_key=None, freq=0.8, **req_args):
     """Get information about each mutation present in a lineage or set of lineages in clinical sequences.
 
      :param pango_lin: A string or list of lineage names. Return mutations occuring in any of these lineages.
@@ -196,7 +199,7 @@ def known_mutations(pango_lin=None, descendants=False, mutations=None, freq=0.8,
 
      :Parameter example 1: { 'pango_lin': 'BA.2.86.1', 'descendants': True }
      :Parameter example 2: { 'pango_lin': ['BA.1', 'BA.2'] } """
-    query = _lin_or_descendants(pango_lin, descendants, ' OR ')
+    query = _lin_or_descendants(pango_lin, descendants, lineage_key, ' OR ')
     if mutations is not None: query += f'&mutations={" AND ".join(_list_if_str(mutations))}'
     query += f'&frequency={freq}'
     data = _get_outbreak_data('genomics/lineage-mutations', query, collect_all=False, **req_args)
@@ -227,7 +230,7 @@ def mutations_by_lineage(**kwargs):
     return mutation_prevalences(**kwargs)
 
 def lineage_cl_prevalence( pango_lin, descendants=False, location=None, mutations=None,
-                           datemin=None, datemax=None, cumulative=False, **req_args ):
+                           datemin=None, datemax=None, cumulative=False, lineage_key=None, **req_args ):
     """Get the daily prevalence of a set of lineages in clinical sequencing data.
 
      :param pango_lin: List of lineage names to query for.
@@ -241,13 +244,13 @@ def lineage_cl_prevalence( pango_lin, descendants=False, location=None, mutation
      :return: A pandas dataframe containing prevalence data.
 
      :Parameter example: { 'pango_lin': 'BA.2.86.1', 'descendants': True } """
-    query = _lin_or_descendants(pango_lin, descendants)
+    query = _lin_or_descendants(pango_lin, descendants, lineage_key)
     if location is not None: query += f'&location_id={location}'
     if mutations is not None: query += f'&mutations={" AND ".join(_list_if_str(mutations))}'
     query += f'&cumulative={_lboolstr(cumulative)}'
     if datemin is not None: query += f'&min_date={datemin}'
     if datemax is not None: query += f'&max_date={datemax}'
-     try:
+    try:
         data = _get_outbreak_data('genomics/prevalence-by-location', query, collect_all=False, **req_args)
         return pd.DataFrame(data['results']) if cumulative else _multiquery_to_df(data).set_index(['date'])
     except KeyError:
@@ -478,4 +481,3 @@ def get_wastewater_lineages(input_df, **req_args):
      :Parameter example: { 'input_df': pd.DataFrame({'sra_accession': ['SRR26963071', 'SRR25666039']}), 'server': 'dev.outbreak.info' } """
     data = _fetch_ww_data(input_df, 'wastewater_demix/query', **req_args)
     return data.rename(columns={'name': 'lineage'}).set_index('lineage', append=True)
-
