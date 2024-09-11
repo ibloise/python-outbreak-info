@@ -132,26 +132,6 @@ def datebin_and_agg(df, weights=None, freq='7D', rolling=1, startdate=None, endd
         if log: variances = variances * prevalences**2
     return (prevalences, variances) if variance else prevalences
 
-def infer_mutations(mutation_df, muts_of_interest):
-    """Infer which samples contain mutations with zero prevalence based on coverage data.
-
-     :param mutation_df: A multi-indexed pandas dataframe of mutations; df.index[1] is assumed to contain mutation names.
-     :param muts_of_interest: The list of mutations to infer zero-prevalence samples of.
-
-     :return: The input df sliced down to `muts_of_interest` with additional rows corresponding to zero-mutation-prevalence samples added."""
-    mutation_df = mutation_df.copy().loc[pd.IndexSlice[:, muts_of_interest],:]
-    mutation_df = mutation_df.set_index(mutation_df['sra_accession'], append=True).unstack(1).stack(dropna=False)
-    mutation_df_b = mutation_df.reset_index(level=1, drop=True)
-    mutation_df = mutation_df_b.interpolate().bfill().ffill()
-    mutation_df['prevalence'] = mutation_df_b['prevalence']
-    def is_covered(x):
-        for i in x['coverage_intervals']:
-            if i['start'] <= x['site'] and x['site'] <= i['end']: return True
-        return False
-    mutation_df[mutation_df.apply(is_covered, axis=1)]
-    mutation_df['prevalence'] = mutation_df['prevalence'].fillna(0)
-    return mutation_df
-
 def get_tree(url='https://raw.githubusercontent.com/outbreak-info/outbreak.info/master/curated_reports_prep/lineages.yml'):
     """Download and parse the lineage tree (derived from the Pangolin project).
 
