@@ -377,7 +377,7 @@ def get_wastewater_latest(**kwargs):
     query = _ww_metadata_query(**kwargs)
     data = _get_outbreak_data( 'wastewater_metadata/query',
         "size=1&sort=-collection_date&fields=collection_date&q=" + query,
-        server=kwargs.get('server'), auth=kwargs.get('auth') ) 
+        server=kwargs.get('server'), auth=kwargs.get('auth') )
     return _get_ww_results(data)['collection_date'][0]
 
 def get_wastewater_samples(**kwargs):
@@ -438,22 +438,30 @@ def get_wastewater_samples_by_mutation(site, alt_base=None, min_prevalence=0.01,
 def _fetch_ww_data(sample_metadata, endpoint, server=None, auth=None):
     if server is None: server = default_server
     if auth is None: auth = _get_user_authentication()
+    if not isinstance(sample_metadata, pd.DataFrame): sample_metadata = pd.Series(sample_metadata).rename('sra_accession').to_frame()
     data = {"q": sample_metadata['sra_accession'].unique().tolist(), "scopes": "sra_accession"}
     url = f'https://{server}/{endpoint}/?size=1000'
     if print_reqs: print('POST', url)
     response = requests.post(url, headers=auth, json=data)
-    df = pd.DataFrame(response.json()).drop(columns=['_score', '_id'])
+    if not response.ok:
+        raise RuntimeError('Request failed. Please check that the network connection and endpoint are online.')
+    df = pd.DataFrame(response.json())
+    if not '_score' in df.columns:
+        raise RuntimeError('Empty response. Please check the query.')
+    df = df.drop(columns=['_score', '_id'])
     merged_data = pd.merge(sample_metadata.reset_index(names=sample_metadata.index.names), df, on='sra_accession').set_index(sample_metadata.index.names)
     return merged_data.drop(columns='notfound', errors='ignore')
 
 def get_wastewater_metadata(input_df, **req_args):
     """Add wastewater sample metadata to a DataFrame containing sample IDs.
 
-     :param input_df: Pandas DataFrame containing sample IDs as a column.
+     :param input_df: Pandas DataFrame containing sample IDs as a column, as from get_wastewater_samples_by_*. A list of accession IDs is also supported.
 
      :return: The input dataframe joined with metadata columns.
 
-     :Parameter example: { 'input_df': pd.DataFrame({'sra_accession': ['SRR26963071', 'SRR25666039']}), 'server': 'dev.outbreak.info' } """
+     :Parameter example: { 'input_df': ['SRR26963071', 'SRR25666039'], 'server': 'dev.outbreak.info' } """
+    if isinstance(input_df, pd.DataFrame) and 'geo_loc_country' in input_df.columns:
+        raise ValueError('This DataFrame already seems to have metadata information.')
     df = _fetch_ww_data(input_df, 'wastewater_metadata/query', **req_args)
     df['viral_load'] = df['viral_load'].where(df['viral_load'] != -1, pd.NA)
     df['normed_viral_load'] = _normalize_viral_loads_by_site(df)
@@ -462,11 +470,13 @@ def get_wastewater_metadata(input_df, **req_args):
 def get_wastewater_mutations(input_df, **req_args):
     """Add wastewater mutations data to a DataFrame containing sample IDs.
 
-     :param input_df: DataFrame containing metadata.
+     :param input_df: Pandas DataFrame containing sample IDs as a column, as from get_wastewater_samples_by_*. A list of accession IDs is also supported.
 
      :return: The input dataframe joined with mutation data columns.
 
-     :Parameter example: { 'input_df': pd.DataFrame({'sra_accession': ['SRR26963071', 'SRR25666039']}), 'server': 'dev.outbreak.info' } """
+     :Parameter example: { 'input_df': ['SRR26963071', 'SRR25666039'], 'server': 'dev.outbreak.info' } """
+    if isinstance(input_df, pd.DataFrame) and 'mutation' in input_df.columns:
+        raise ValueError('This DataFrame already seems to have mutation information.')
     data = _fetch_ww_data(input_df, 'wastewater_variants/query', **req_args)
     data['mutation'] = data['site'].astype(int).astype(str) + data['alt_base'].astype(str)
     return data.set_index('mutation', append=True)
@@ -474,10 +484,12 @@ def get_wastewater_mutations(input_df, **req_args):
 def get_wastewater_lineages(input_df, **req_args):
     """Add wastewater demix results to a DataFrame containing sample IDs.
 
-     :param input_df: DataFrame containing metadata.
+     :param input_df: Pandas DataFrame containing sample IDs as a column, as from get_wastewater_samples_by_*. A list of accession IDs is also supported.
 
      :return: The input dataframe joined with lineage data columns.
 
-     :Parameter example: { 'input_df': pd.DataFrame({'sra_accession': ['SRR26963071', 'SRR25666039']}), 'server': 'dev.outbreak.info' } """
+     :Parameter example: { 'input_df': ['SRR26963071', 'SRR25666039'], 'server': 'dev.outbreak.info' } """
+    if isinstance(input_df, pd.DataFrame) and ('name' in input_df.columns or 'lineage' in input_df.columns):
+        raise ValueError('This DataFrame already seems to have lineage information.')
     data = _fetch_ww_data(input_df, 'wastewater_demix/query', **req_args)
     return data.rename(columns={'name': 'lineage'}).set_index('lineage', append=True)
