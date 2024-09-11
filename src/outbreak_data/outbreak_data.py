@@ -252,7 +252,8 @@ def lineage_cl_prevalence( pango_lin, descendants=False, location=None, mutation
      :return: A pandas dataframe containing prevalence data.
 
      :Parameter example: { 'pango_lin': 'BA.2.86.1', 'descendants': True } """
-    query = _lin_or_descendants(pango_lin, descendants, lineage_key)
+    if len(exclude_descendants) > 0: descendants = True
+    query = _lin_or_descendants(pango_lin, descendants, lineage_key, exclude=exclude_descendants)
     if location is not None: query += f'&location_id={location}'
     if mutations is not None: query += f'&mutations={" AND ".join(_list_if_str(mutations))}'
     query += f'&cumulative={_lboolstr(cumulative)}'

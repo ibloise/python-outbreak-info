@@ -73,7 +73,7 @@ def const_idx(df, const, level):
     df = df.copy()
     df.index = df.index.set_levels([const]*len(df), level=level, verify_integrity=False)
     return df
-    
+
 def datebin_and_agg(df, weights=None, freq='7D', rolling=1, startdate=None, enddate=None, column='prevalence', norm=True, variance=False, log=False, trustna=1):
     """Gather and aggregate samples into signals.
 
@@ -160,7 +160,7 @@ def write_compressed_tree(tree, file='./tree.json.gz'):
 def read_compressed_tree(file='./tree.json.gz'):
     with gzip.open(file, 'rb') as f:
         return frozendict.deepfreeze(json.loads(f.read()))
-        
+
 def cluster_df(df, clusters, tree, lineage_key=None, norm=True):
     """Aggregate the columns of a dataframe into some phylogenetic groups.
 
