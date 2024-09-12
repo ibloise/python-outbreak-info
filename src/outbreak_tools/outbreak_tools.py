@@ -161,7 +161,7 @@ def read_compressed_tree(file='./tree.json.gz'):
     with gzip.open(file, 'rb') as f:
         return frozendict.deepfreeze(json.loads(f.read()))
 
-def cluster_df(df, clusters, tree, lineage_key=None, norm=True):
+def cluster_df(df, clusters, tree, lineage_key=None, norm=False, include_K=False):
     """Aggregate the columns of a dataframe into some phylogenetic groups.
 
      :param df: A dataframe of prevalence signals. Rows are assumed to be date bins and columns are assumed to be lineages.
@@ -169,10 +169,14 @@ def cluster_df(df, clusters, tree, lineage_key=None, norm=True):
      :param tree: A frozendict representing the root of the phylo tree object.
      :param lineage_key: An OrderedDict mapping names to tree nodes.
      :param norm: Whether to assume that values in a row should sum to one.
+     :param include_K: Whether to include fixed lineages in the output.
 
      :return: A tuple (data,names,is_inclusive) where data is the input dataframe with aggregated and relabeled columns, names contains the names of the root lineages for each column/group, and is_inclusive indicates whether the column's root is in U or V."""
     if lineage_key is None: tree = get_lineage_key(tree)
-    (U,V) = clusters
+    (U,V,K) = clusters
+    if include_K:
+        U = U|K
+        K = set([])
     prevalences_dated = [row for date,row in df.iterrows()]
     dates = [date for date,row in df.iterrows()]
     order = np.argsort([w['alias'] for w in list(U)+list(V)])
@@ -181,7 +185,7 @@ def cluster_df(df, clusters, tree, lineage_key=None, norm=True):
     vlabels = [f'other {v["alias"]}*' + (f' ({v["name"]})' if v["name"] != v["alias"] else '') for v in V]
     legend = list(np.array(ulabels+vlabels)[order])
     clustered_prevalences = pd.DataFrame(
-        { d: { label:outbreak_clustering.get_agg_prevalence(lin, a, U|V)
+        { d: { label:outbreak_clustering.get_agg_prevalence(lin, a, U|V|K)
             for label, lin in zip(legend, lins) }
         for d,a in zip(dates, prevalences_dated) } ).transpose()
     if norm:

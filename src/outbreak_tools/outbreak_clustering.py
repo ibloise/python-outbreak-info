@@ -25,7 +25,7 @@ def get_lineage_key(tree, field='name'):
         return np.concatenate([[(tree[field], tree)]] + [get_names(c) for c in tree['children']])
     return OrderedDict(sorted(get_names(tree), key=lambda x: x[0]))
 
-def cluster_lineages(prevalences, tree, lineage_key=None, n=10, alpha=0.15):
+def cluster_lineages(prevalences, tree, lineage_key=None, n=10, K=set([]), alpha=0.15):
     """Cluster lineages via greedy group-splitting on the phylo tree starting from the root based on some heuristics.
 
      :param prevalences: A dict, pandas series or other map between lineage names and (un-normalized) prevalences.
@@ -55,12 +55,19 @@ def cluster_lineages(prevalences, tree, lineage_key=None, n=10, alpha=0.15):
                len(set(node['children']) & nodeset) > 0 or \
                np.sum([contains_descendant(c, nodeset) for c in node['children']]) > 0
     U,V = set([tree]), set([])
+    cs = set([])
+    for c in K:
+        update_ancestors(c, -agg_prevalences[c['lindex']], cs)
+        cs = cs | set([c])
+    root = tree
+    while root['parent'] != root['name']:
+        root = lineage_key[root['parent']]
     while len(U|V) < n:
-        split_node = list(U|V)[np.argmax([ agg_prevalences[w['lindex']] * 0.1 + np.max(
-            [0] + [agg_prevalences[c['lindex']] for c in w['children'] if not c in U|V] ) for w in list(U|V) ])]
-        C = [c for c in split_node['children'] if not c in U|V]
-        add_node = C[np.argmax([agg_prevalences[c['lindex']] for c in C])]
-        update_ancestors(add_node, -agg_prevalences[add_node['lindex']], U|V)
+        add_node_candidates = [c for w in U|V for c in w['children'] if not c in U|V|K]
+        score = lambda c: agg_prevalences[c['lindex']] * agg_prevalences[lineage_key[c['parent']]['lindex']]
+        add_node = add_node_candidates[np.argmax([score(c) for c in add_node_candidates])]
+        split_node = lineage_key[add_node['parent']]
+        update_ancestors(add_node, -agg_prevalences[add_node['lindex']], U|V|K)
         if split_node in U:
             U = U - set([split_node])
             V = V | set([split_node])
@@ -68,12 +75,13 @@ def cluster_lineages(prevalences, tree, lineage_key=None, n=10, alpha=0.15):
                 V = V | set([add_node])
         else:   U = U | set([add_node])
         if len(U) > 1 and len(list(V - set([tree]))) > 1:
-            drop_node = list(V - set([tree]))[np.argmin([agg_prevalences[v['lindex']] for v in list(V - set([tree]))])]
+            drop_node_candidates = list(V - set([tree]))
+            drop_node = drop_node_candidates[np.argmin([agg_prevalences[d['lindex']] for d in drop_node_candidates])]
             if agg_prevalences[drop_node['lindex']] < alpha * np.mean([agg_prevalences[u['lindex']] for u in U]):
                 V = V - set([drop_node])
-                update_ancestors(drop_node, agg_prevalences[drop_node['lindex']], U|V)
-    return U,V
-
+                update_ancestors(drop_node, agg_prevalences[drop_node['lindex']], U|V|K)
+    if root != tree: K = K|set([root])
+    return U,V,K
 
 def get_agg_prevalence(root, prevalences, W=set([])):
     """Compute the total prevalence of all lineages in a group.
