@@ -247,7 +247,7 @@ def lineage_cl_prevalence( pango_lin, descendants=False, location=None, mutation
     query += f'&cumulative={_lboolstr(cumulative)}'
     if datemin is not None: query += f'&min_date={datemin}'
     if datemax is not None: query += f'&max_date={datemax}'
-     try:
+    try:
         data = _get_outbreak_data('genomics/prevalence-by-location', query, collect_all=False, **req_args)
         return pd.DataFrame(data['results']) if cumulative else _multiquery_to_df(data).set_index(['date'])
     except KeyError:

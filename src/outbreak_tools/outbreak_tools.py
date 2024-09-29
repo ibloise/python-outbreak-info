@@ -6,7 +6,7 @@ import gzip
 import yaml
 import json
 
-from outbreak_tools import outbreak_clustering
+from src.outbreak_tools import outbreak_clustering
 
 def get_colors(lins, brighten, lineage_key):
     """Heuristically assign colors to lineages to convey divergence.
