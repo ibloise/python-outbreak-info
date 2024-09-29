@@ -21,8 +21,14 @@ def _pangolin_crumbs(pango_lin, lin_prefix=True):
 def _multiquery_to_df(data):
     return pd.concat([pd.DataFrame(v).assign(query=k) for k,v in data['results'].items()], axis=0)
 
-def _lin_or_descendants(pango_lin, descendants, join=','):
-    if descendants: query = _pangolin_crumbs(pango_lin)
+def _lin_or_descendants(pango_lin, descendants, lineage_key, join=',', exclude=[]):
+    if descendants:
+        if lineage_key and pango_lin in lineage_key: pango_lin = lineage_key[pango_lin]['alias']
+        if not lineage_key: warnings.warn('without the lineage_key parameter, descendant queries on aliased lineages with aliased children (eg JN.1 and KP.1) will not be accurate.')
+        query = _pangolin_crumbs(pango_lin)
+        for ex in exclude:
+            if lineage_key and ex in lineage_key: ex = lineage_key[ex]['alias']
+            query += f' AND NOT pangolin_lineage_crumbs:*;{ex};*'
     else: query = f'pangolin_lineage={join.join(_list_if_str(pango_lin))}'
     return query
 
@@ -70,7 +76,7 @@ def _get_outbreak_data(endpoint, argstring, server=None, auth=None, collect_all=
                                         collect_all=True, curr_page=curr_page+1 )
             for k in json_data.keys(): json_data[k].extend(next_page.get(k) or [])
     return json_data
-    
+
 def mutation_details(mutations, **req_args):
     """Get details of one or more mutations from clinical data.
 
@@ -184,7 +190,7 @@ def sequence_counts(location=None, sub_admin=False, **req_args):
     data = pd.DataFrame(_get_outbreak_data('genomics/sequence-count', query, **req_args)['results'])
     return data.set_index('location_id' if sub_admin else 'date')
 
-def known_mutations(pango_lin=None, descendants=False, mutations=None, freq=0.8, **req_args):
+def known_mutations(pango_lin=None, descendants=False, mutations=None, lineage_key=None, freq=0.8, **req_args):
     """Get information about each mutation present in a lineage or set of lineages in clinical sequences.
 
      :param pango_lin: A string or list of lineage names. Return mutations occuring in any of these lineages.
@@ -196,7 +202,7 @@ def known_mutations(pango_lin=None, descendants=False, mutations=None, freq=0.8,
 
      :Parameter example 1: { 'pango_lin': 'BA.2.86.1', 'descendants': True }
      :Parameter example 2: { 'pango_lin': ['BA.1', 'BA.2'] } """
-    query = _lin_or_descendants(pango_lin, descendants, ' OR ')
+    query = _lin_or_descendants(pango_lin, descendants, lineage_key, join=' OR ')
     if mutations is not None: query += f'&mutations={" AND ".join(_list_if_str(mutations))}'
     query += f'&frequency={freq}'
     data = _get_outbreak_data('genomics/lineage-mutations', query, collect_all=False, **req_args)
@@ -207,15 +213,19 @@ def lineage_mutations(**kwargs):
 def mutation_prevalences( mutations=None, location=None, pango_lin=None, datemin=None, datemax=None, **req_args ):
     """Get the prevalence of a set of mutations given in some subset of clinical sequences.
 
-     :param mutations: List of mutations to query for.
+     :param mutations: List of mutations to query for. When datemin and datemax aren't specified, unions and intersections of lineages may be specified using OR and AND respectively. For example ['{mut1} AND ({mut2} OR {mut3})', '{mut4}']
      :param location: The ID string of a location to query within.
      :param pango_lineage: The name of a pangolin lineage to query within.
-     :param datemin: (Optional). String containing start of date range to query within in YYYY-MM-DD.
-     :param datemax: (Optional). String containing end of date range to query within in YYYY-MM-DD.
+     :param datemin: (Optional). String containing start of date range to query within in YYYY-MM-DD. Specifying datemin is only supported for AND queries; lineage information is not returned.
+     :param datemax: (Optional). String containing end of date range to query within in YYYY-MM-DD. Specifying datemax is only supported for AND queries; lineage information is not returned.
 
      :return: A pandas dataframe of mutation information.
 
      :Parameter example: { 'mutations': ['orf1b:r1315c', 's:l24s'], 'pango_lin': 'BA.2' } """
+    if datemin is not None or datemax is not None:
+        if ' OR ' in str(mutations) or ' , ' in str(mutations):
+            raise ValueError('When datemin or datemax is specified, only AND queries are supported.')
+        return lineage_cl_prevalence(pango_lin='.', descendants=True, location=location, mutations=mutations, datemin=datemin, datemax=datemax, lineage_key=dict())
     query = f'mutations={", ".join(_list_if_str(mutations))}'
     if pango_lin is not None: query += f'&pangolin_lineage={pango_lin}'
     if location is not None: query += f'&location_id={location}'
@@ -227,21 +237,23 @@ def mutations_by_lineage(**kwargs):
     return mutation_prevalences(**kwargs)
 
 def lineage_cl_prevalence( pango_lin, descendants=False, location=None, mutations=None,
-                           datemin=None, datemax=None, cumulative=False, **req_args ):
+                           datemin=None, datemax=None, cumulative=False, lineage_key=None, exclude_descendants=[], **req_args ):
     """Get the daily prevalence of a set of lineages in clinical sequencing data.
 
-     :param pango_lin: List of lineage names to query for.
-     :param descendants: If True, return mutations contained in pango_lin as well as any descendants (works only with single pango_lin).
-     :param location: A string containing the location ID to query within.
-     :param mutations: A list of mutation names; query within the subset of sequences containing all of these.
-     :param datemin: (Optional). String containing start of date range to query within in YYYY-MM-DD.
-     :param datemax: (Optional). String containing end of date range to query within in YYYY-MM-DD.
-     :param cumulative: If true returns the cumulative global prevalence since the first day of detection.
+     :param pango_lin: Lineage name or list of lineage names to query for. When descendants=False, unions of lineages may be specified using OR, for example ['{lin1} OR {lin2}', '{lin3}']
+     :param descendants (Optional): If True, return mutations contained in pango_lin as well as any descendants (works only with single pango_lin).
+     :param location (Optional): A string containing the location ID to query within.
+     :param mutations (Optional): A list of mutation names; query within the subset of sequences containing all of these.
+     :param datemin (Optional): String containing start of date range to query within in YYYY-MM-DD.
+     :param datemax (Optional): String containing end of date range to query within in YYYY-MM-DD.
+     :param cumulative (Optional): If true returns the cumulative global prevalence since the first day of detection.
+     :param lineage_key (Optional): The lineage key for dealiasing variant names
 
      :return: A pandas dataframe containing prevalence data.
 
      :Parameter example: { 'pango_lin': 'BA.2.86.1', 'descendants': True } """
-    query = _lin_or_descendants(pango_lin, descendants)
+    if len(exclude_descendants) > 0: descendants = True
+    query = _lin_or_descendants(pango_lin, descendants, lineage_key, exclude=exclude_descendants)
     if location is not None: query += f'&location_id={location}'
     if mutations is not None: query += f'&mutations={" AND ".join(_list_if_str(mutations))}'
     query += f'&cumulative={_lboolstr(cumulative)}'
@@ -260,7 +272,7 @@ def global_prevalence(pango_lin, **kwargs):
 def lineage_by_sub_admin(pango_lin, mutations=None, location=None, ndays=180, detected=False, **req_args):
     """Get clinical data from the most recent date with more than zero sequences for each sublocation.
 
-     :param pangolin_lineage: A list or string of lineage names to query for. Results for each lineage are returned on separate rows.
+     :param pangolin_lineage: A list or string of lineage names to query for. Results for each lineage are returned on separate rows. Queries such as ['{lin1} OR {lin2}', '{lin3}'] may be used to get results for the union of lin1 and lin2.
      :param mutations: A list or string of mutations to query for; only sequences with all of these mutations will match against pangolin_lineage.
      :param location_id: A string containing a location ID. If not specified, returns global data at the country level.
      :param ndays: A positive integer number of days back from the current date to calculative cumuative counts within.
@@ -276,7 +288,7 @@ def lineage_by_sub_admin(pango_lin, mutations=None, location=None, ndays=180, de
     query += f'&detected={_lboolstr(detected)}'
     data = _get_outbreak_data('genomics/lineage-by-sub-admin-most-recent', query, collect_all=False, **req_args)
     return _multiquery_to_df(data).set_index(['name', 'query'])
-    
+
 def all_lineage_prevalences( location=None, ndays=180, nday_threshold=10, other_threshold=0.05,
                              other_exclude=None, cumulative=False, **req_args ):
     """Get prevalences of lineages circulating in a location according to clinical sequencing data.
@@ -374,7 +386,7 @@ def get_wastewater_latest(**kwargs):
     query = _ww_metadata_query(**kwargs)
     data = _get_outbreak_data( 'wastewater_metadata/query',
         "size=1&sort=-collection_date&fields=collection_date&q=" + query,
-        server=kwargs.get('server'), auth=kwargs.get('auth') ) 
+        server=kwargs.get('server'), auth=kwargs.get('auth') )
     return _get_ww_results(data)['collection_date'][0]
 
 def get_wastewater_samples(**kwargs):
@@ -435,22 +447,30 @@ def get_wastewater_samples_by_mutation(site, alt_base=None, min_prevalence=0.01,
 def _fetch_ww_data(sample_metadata, endpoint, server=None, auth=None):
     if server is None: server = default_server
     if auth is None: auth = _get_user_authentication()
+    if not isinstance(sample_metadata, pd.DataFrame): sample_metadata = pd.Series(sample_metadata).rename('sra_accession').to_frame()
     data = {"q": sample_metadata['sra_accession'].unique().tolist(), "scopes": "sra_accession"}
     url = f'https://{server}/{endpoint}/?size=1000'
     if print_reqs: print('POST', url)
     response = requests.post(url, headers=auth, json=data)
-    df = pd.DataFrame(response.json()).drop(columns=['_score', '_id'])
+    if not response.ok:
+        raise RuntimeError('Request failed. Please check that the network connection and endpoint are online.')
+    df = pd.DataFrame(response.json())
+    if not '_score' in df.columns:
+        raise RuntimeError('Empty response. Please check the query.')
+    df = df.drop(columns=['_score', '_id'])
     merged_data = pd.merge(sample_metadata.reset_index(names=sample_metadata.index.names), df, on='sra_accession').set_index(sample_metadata.index.names)
     return merged_data.drop(columns='notfound', errors='ignore')
 
 def get_wastewater_metadata(input_df, **req_args):
     """Add wastewater sample metadata to a DataFrame containing sample IDs.
 
-     :param input_df: Pandas DataFrame containing sample IDs as a column.
+     :param input_df: Pandas DataFrame containing sample IDs as a column, as from get_wastewater_samples_by_*. A list of accession IDs is also supported.
 
      :return: The input dataframe joined with metadata columns.
 
-     :Parameter example: { 'input_df': pd.DataFrame({'sra_accession': ['SRR26963071', 'SRR25666039']}), 'server': 'dev.outbreak.info' } """
+     :Parameter example: { 'input_df': ['SRR26963071', 'SRR25666039'], 'server': 'dev.outbreak.info' } """
+    if isinstance(input_df, pd.DataFrame) and 'geo_loc_country' in input_df.columns:
+        raise ValueError('This DataFrame already seems to have metadata information.')
     df = _fetch_ww_data(input_df, 'wastewater_metadata/query', **req_args)
     df['viral_load'] = df['viral_load'].where(df['viral_load'] != -1, pd.NA)
     df['normed_viral_load'] = _normalize_viral_loads_by_site(df)
@@ -459,11 +479,13 @@ def get_wastewater_metadata(input_df, **req_args):
 def get_wastewater_mutations(input_df, **req_args):
     """Add wastewater mutations data to a DataFrame containing sample IDs.
 
-     :param input_df: DataFrame containing metadata.
+     :param input_df: Pandas DataFrame containing sample IDs as a column, as from get_wastewater_samples_by_*. A list of accession IDs is also supported.
 
      :return: The input dataframe joined with mutation data columns.
 
-     :Parameter example: { 'input_df': pd.DataFrame({'sra_accession': ['SRR26963071', 'SRR25666039']}), 'server': 'dev.outbreak.info' } """
+     :Parameter example: { 'input_df': ['SRR26963071', 'SRR25666039'], 'server': 'dev.outbreak.info' } """
+    if isinstance(input_df, pd.DataFrame) and 'mutation' in input_df.columns:
+        raise ValueError('This DataFrame already seems to have mutation information.')
     data = _fetch_ww_data(input_df, 'wastewater_variants/query', **req_args)
     data['mutation'] = data['site'].astype(int).astype(str) + data['alt_base'].astype(str)
     return data.set_index('mutation', append=True)
@@ -471,11 +493,49 @@ def get_wastewater_mutations(input_df, **req_args):
 def get_wastewater_lineages(input_df, **req_args):
     """Add wastewater demix results to a DataFrame containing sample IDs.
 
-     :param input_df: DataFrame containing metadata.
+     :param input_df: Pandas DataFrame containing sample IDs as a column, as from get_wastewater_samples_by_*. A list of accession IDs is also supported.
 
      :return: The input dataframe joined with lineage data columns.
 
-     :Parameter example: { 'input_df': pd.DataFrame({'sra_accession': ['SRR26963071', 'SRR25666039']}), 'server': 'dev.outbreak.info' } """
+     :Parameter example: { 'input_df': ['SRR26963071', 'SRR25666039'], 'server': 'dev.outbreak.info' } """
+    if isinstance(input_df, pd.DataFrame) and ('name' in input_df.columns or 'lineage' in input_df.columns):
+        raise ValueError('This DataFrame already seems to have lineage information.')
     data = _fetch_ww_data(input_df, 'wastewater_demix/query', **req_args)
     return data.rename(columns={'name': 'lineage'}).set_index('lineage', append=True)
 
+def get_wastewater_lin_prevalences(**kwargs):
+    """Get aggregated lineage prevalences from ww. See get_wastewater_samples for parameters."""
+    server = kwargs['server'] if 'server' in kwargs else None
+    kwargs['demix_success'] = True
+    samples=get_wastewater_samples(kwargs)
+    samples=get_wastewater_lineages(samples)
+    return datebin_and_agg(samples)
+
+def infer_mutations(mutation_df, muts_of_interest):
+    """Infer which samples contain mutations with zero prevalence based on coverage data.
+
+     :param mutation_df: A multi-indexed pandas dataframe of mutations; df.index[1] is assumed to contain mutation names.
+     :param muts_of_interest: The list of mutations to infer zero-prevalence samples of.
+
+     :return: The input df sliced down to `muts_of_interest` with additional rows corresponding to zero-mutation-prevalence samples added."""
+    mutation_df = mutation_df.copy().loc[pd.IndexSlice[:, muts_of_interest],:]
+    mutation_df = mutation_df.set_index(mutation_df['sra_accession'], append=True).unstack(1).stack(dropna=False)
+    mutation_df_b = mutation_df.reset_index(level=1, drop=True)
+    mutation_df = mutation_df_b.interpolate().bfill().ffill()
+    mutation_df['prevalence'] = mutation_df_b['prevalence']
+    def is_covered(x):
+        for i in x['coverage_intervals']:
+            if i['start'] <= x['site'] and x['site'] <= i['end']: return True
+        return False
+    mutation_df[mutation_df.apply(is_covered, axis=1)]
+    mutation_df['prevalence'] = mutation_df['prevalence'].fillna(0)
+    return mutation_df
+
+def get_wastewater_mut_prevalences(mutations, **kwargs):
+    """Get prevalences of a list of mutations. See get_wastewater_samples for parameters."""
+    server = kwargs['server'] if 'server' in kwargs else None
+    kwargs['variants_success'] = True
+    samples = get_wastewater_samples(kwargs)
+    samples = get_wastewater_mutations(samples)
+    samples = infer_mutations(samples, mutations)
+    return datebin_and_agg(samples)
