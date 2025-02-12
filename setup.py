@@ -17,12 +17,12 @@ description = ("Python interface to Outbreak.info,"
 
 setup(
     name="python_outbreak_info",
-    version="1.0.4",
+    version="2.0.0",
     package_dir={"": "src"},
     packages=find_packages(where="src"),
     author="Outbreak.info dev team",
     license='MIT',
-    author_email="lhughes@scripps.edu",
+    author_email="ehufbauer@scripps.edu",
     url="https://github.com/outbreak-info/python-outbreak-info",
     description=description,
     long_description=long_description,

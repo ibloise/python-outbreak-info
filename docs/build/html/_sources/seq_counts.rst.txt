@@ -1,40 +1,21 @@
-sequence_counts(location, cumulative, sub_admin)
--------------------------------------------------
+sequence_counts
+-----------------------
 
 .. autofunction:: outbreak_data.sequence_counts
 
-Example usage:
+**Example Usage**
 
-1. Get number of daily sequence counts in the US::
+Get number of daily sequence counts in New York, Colorado, Florida and Texas::
+
+    >>> df = outbreak_data.sequence_counts('USA', sub_admin = True)
+    >>> states = df.loc[['USA_US-NY', 'USA_US-FL', 'USA_US-CO', 'USA_US-TX']]
+    >>> states
+
+                 total_count
+    location_id             
+    USA_US-NY         346598
+    USA_US-FL         211068
+    USA_US-CO         243188
+    USA_US-TX         302701
    
-    df = od.sequence_counts('USA')
-    print(df)
-
-
-.. code-block::
-   :caption: Output
-
-               Key        Values
-    0       mutation   ORF1b:P314L
-    1      alt_codon           CTT
-    2  is_synonymous         False
-    3      codon_num           314
-    4      ref_codon           CCT
-    5           gene         ORF1b
-    6            pos         14407
-    7         alt_aa             L
-    8         ref_aa             P
-    9           type  substitution
-
-2. Get total number of sequence counts
-
-    df = od.sequence_counts('USA', cumulative=True)
-    print(df)
-
-.. code-block::
-   :caption: Output
-
-                  Values
-    total_count  4617418
-
 
