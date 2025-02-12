@@ -12,12 +12,13 @@
 #
 import os
 import sys
-sys.path.insert(0, os.path.abspath('./outbreak_data/'))
-
+sys.path.insert(0, os.path.abspath('../../src/outbreak_data/'))
+sys.path.insert(1, os.path.abspath('../../src/outbreak_tools/'))
 
 # -- Project information -----------------------------------------------------
 
 project = 'Python Outbreak.info API'
+smartquotes = False
 
 # The full version, including alpha/beta/rc tags
 release = '0.1'

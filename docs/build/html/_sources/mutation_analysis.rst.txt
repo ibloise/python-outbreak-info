@@ -1,7 +1,7 @@
 Viral Mutation Analysis
 -------------------------
 
-**Lineage_Mutations Heatmap**
+**known_mutations Heatmap**
 
 A basic but important question: how do we define a lineage? What mutations consistently appear in most sequences within a lineage? We could start by plotting some of the characteristic mutations of XBB occurring in 80% of sequences. Even better, we can do this for mulitple related lineages and compare them using a heatmap::
      
@@ -15,27 +15,27 @@ A basic but important question: how do we define a lineage? What mutations consi
 
     # Collecting 15 characteristic mutations and their prevalences for each variant     
     
-    lin0 = od.lineage_mutations("xbb", freq = 0.80)
+    lin0 = od.known_mutations("xbb", freq = 0.80)
     lin0["lineage"] = "xbb"
     lin0 = lin0.iloc[:15]
 
-    lin1 = od.lineage_mutations("xbb.1", freq = 0.80)
+    lin1 = od.known_mutations("xbb.1", freq = 0.80)
     lin1["lineage"] = "xbb.1"
     lin1 = lin1.iloc[:15]
 
-    lin2 = od.lineage_mutations("xbb.1.5", freq = 0.80)
+    lin2 = od.known_mutations("xbb.1.5", freq = 0.80)
     lin2["lineage"] = "xbb.1.5"
     lin2 = lin2.iloc[:15]
 
-    lin3 = od.lineage_mutations("xbb.1.16", freq = 0.80)
+    lin3 = od.known_mutations("xbb.1.16", freq = 0.80)
     lin3["lineage"] = "xbb.1.16"
     lin3 = lin3.iloc[:15]
 
-    lin4 = od.lineage_mutations("xbb.1.9", freq = 0.80)
+    lin4 = od.known_mutations("xbb.1.9", freq = 0.80)
     lin4["lineage"] = "xbb.1.9"
     lin4 = lin4.iloc[:15]
 
-    lin5 = od.lineage_mutations("xbb.2.3", freq = 0.80)
+    lin5 = od.known_mutations("xbb.2.3", freq = 0.80)
     lin5["lineage"] = "xbb.2.3"
     lin5 = lin5.iloc[:15]
 
@@ -92,13 +92,13 @@ To better understand the evolution of SARS-CoV-2, we may also want to know what 
 
 For this example we'll look at three different lineages: B.1.1.7, P.1, and B.1.1.529. First, let's get an idea of which mutations are shared between all three lineages::
 
-    lin1 = od.lineage_mutations("b.1.1.7")
+    lin1 = od.known_mutations("b.1.1.7")
     lin1["lineage"] = "b.1.1.7"
 
-    lin2 = od.lineage_mutations("P.1")
+    lin2 = od.known_mutations("P.1")
     lin2["lineage"] = "P.1"
 
-    lin3 = od.lineage_mutations("b.1.1.529")
+    lin3 = od.known_mutations("b.1.1.529")
     lin3["lineage"] = "b.1.1.529"
 
     #Finding intersections

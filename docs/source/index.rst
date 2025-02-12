@@ -24,8 +24,8 @@ The Python Outbreak.info package contains key functions for accessing genomic an
 
 .. code-block:: python
 
-   from outbreak_data import authenticate_user
-   authenticate_user.authenticate_new_user()
+    from outbreak_data.authenticate_user import authenticate_new_user
+    authenticate_new_user()
 
 and then you should be able access all of the functionality of the package. Most of the rest of the tools are available within the ``outbreak_data`` component of the package. For example: 
 
@@ -34,50 +34,114 @@ and then you should be able access all of the functionality of the package. Most
    from outbreak_data import outbreak_data
    lin_list = ['B.1.1.7','B.1.351','B.1.617.2']
    # request lineages occurring with minimum frequency of 0.05 (5%)
-   df = outbreak_data.lineage_mutations(lin_list,freq=0.05)
+   df = outbreak_data.known_mutations(lin_list,freq=0.05)
    # filter mutations and sort by codon number
    df = df[df['gene']=='S'].sort_values(by='codon_num')
 
-For location-specific analyses, users will need to supply the appropriate location code corresponding to their location of interest. To do this, we provide an ID lookup tool kit via the ``outbreak_tools`` part of the package. An example lookup should look like: 
+For wastewater abundance analyses, users will need to supply the appropriate location code corresponding to their location of interest and a date range. To do this, users would first retrieve wastewater data from ``outbreak_data`` then aggregate the data by date and weight to get the abundances for each lineage using the ``outbreak_tools`` part of the package. An example lookup should look like: 
 
 .. code-block:: python
 
+   from outbreak_data import outbreak_data
    from outbreak_tools import outbreak_tools
-   location_list = outbreak_tools.id_lookup(['Illinois','South Africa','Chile'])
-   # which returns ['USA_US-IL', 'ZAF', 'CHL']
+   state = "Ohio"
+   startdate, enddate = "2023-09-01", "2023-10-01"
+   ww_samples = outbreak_data.get_wastewater_samples(region=state, date_range=[startdate, enddate])
+   ww_samples = outbreak_data.get_wastewater_lineages(ww_samples)
+   ww_abundances = outbreak_tools.datebin_and_agg(ww_samples, weights=outbreak_tools.get_ww_weights(ww_samples), startdate=startdate, enddate=enddate, freq='7D')
+   # This data frame is large, so we'll focus on one lineage
+   ww_abundances['B.1.1.191'] 
 
+   (2023-08-31, 2023-09-07]    0.068126
+   (2023-09-07, 2023-09-14]    0.017081
+   (2023-09-14, 2023-09-21]    0.030141
+   (2023-09-21, 2023-09-28]    0.031744
+   Name: EG.2, dtype: float64
+   
 
-.. note::
+**About Clinical and Wastewater Tools**
 
-   This project is under active development.
+Toward the beginning of the SARS-Cov-2 pandemic, viral genome sequencing data were collected through specimens that were obtained from clinical testing. Yet studies have shown that the method has introduced sampling bias due to systemic healthcare disparities, particularly in poor and underserved communities. In contrast, wastewater samples have been highly useful for tracking regional infection dynamics while providing less biased abundance estimates than clinical testing. Data collected by tracking viral genomic sequences in wastewater has also improved community prevalence estimates and detects emerging variants earlier on. 
 
-Core Outbreak Data Tools
---------------------------
+In clinical genomic data, each sample contains one sequence, allowing us to see whether two or more mutations occur frequently together. However, wastewater data samples contain a mix of sequences, and it's unclear which mutations go with which variants exactly. Analyzing clinical data would then be needed to answer co-occurence questions.
+
+The Andersen Lab has developed improved virus concentration protocols and deconvolution software that fully resolve multiple virus strains from wastewater. The resulting data is now deployed by Python-outbreak-info. In short, SARS-Cov-2 analysis should be done using both clinical and wastewater tools in order to see the full picture in viral genomic data.
+
+`Click here <https://www.nature.com/articles/s41586-022-05049-6>`_ for more information on wastewater analysis.
+
+**Example Analysis Workflows**
+
+`Wastewater and Clinical single-lineage prevalence comparison. <https://github.com/outbreak-info/python-outbreak-info/blob/new_docs/tests/figC.ipynb>`_
+
+`Wastewater and Clinical multi-lineage prevalence comparison. <https://github.com/outbreak-info/python-outbreak-info/blob/new_docs/tests/figAB.ipynb>`_
+
+`Wastewater viral load and Clinical test positivity comparison. <https://github.com/outbreak-info/python-outbreak-info/blob/new_docs/tests/figD.ipynb>`_
+
+`Wastewater and Clinical mutation prevalence comparison. <https://github.com/outbreak-info/python-outbreak-info/blob/new_docs/tests/figE.ipynb>`_
+
+Table of Contents:
+===================
+
+User Authentication (*outbreak_data.authenticate_user*)
+--------------------------------------------------------
 .. toctree::
-   auth_setup
-   cases_by_location
-   lineage_mutations
-   all_lineage_prevalences
-   global_prevalence
-   seq_counts
-   mutations_by_lineage
-   prevalence_by_location
-   lineage_by_sub_admin
-   collection_date
-   submission_date
-   mutation_details
-   daily_lag
-   wildcard_lineage
-   wildcard_location
-   wildcard_mutations
-   location_details
-   outbreak_data_functions
-   growth_rates
+   authenticate_user.authenticate_new_user <authenticate_new_user>
 
-Example analyses:
---------------------------
+Core Outbreak Data Tools (*outbreak_data.outbreak_data*)
+---------------------------------------------------------
+.. toctree::
+   outbreak_data.all_lineage_prevalences <all_lineage_prevalences>
+   outbreak_data.cases_by_location <cases_by_location>
+   outbreak_data.daily_lag <daily_lag>
+   outbreak_data.growth_rates <growth_rates>
+   outbreak_data.gr_significance <gr_significance>
+   outbreak_data.known_mutations <known_mutations>
+   outbreak_data.lineage_by_sub_admin <lineage_by_sub_admin>
+   outbreak_data.lineage_cl_prevalence <lineage_cl_prevalence>
+   outbreak_data.most_recent_cl_data <most_recent_cl_data>
+   outbreak_data.mutation_details <mutation_details>
+   outbreak_data.mutation_prevalences <mutation_prevalences>
+   outbreak_data.sequence_counts <seq_counts>
+   outbreak_data.wildcard_location <wildcard_location>
+   outbreak_data.wildcard_lineage <wildcard_lineage>
+
+Wastewater Analysis Tools (*outbreak_data.outbreak_data*)
+-----------------------------------------------------------
+.. toctree::
+   outbreak_data.get_wastewater_latest <get_wastewater_latest>
+   outbreak_data.get_wastewater_lineages <get_wastewater_lineages>
+   outbreak_data.get_wastewater_metadata <get_wastewater_metadata>
+   outbreak_data.get_wastewater_mutations <get_wastewater_mutations>
+   outbreak_data.get_wastewater_samples <get_wastewater_samples>
+   outbreak_data.get_wastewater_samples_by_lineage <get_wastewater_samples_by_lineage>
+   outbreak_data.get_wastewater_samples_by_mutation <get_wastewater_samples_by_mutation>
+
+
+Plotting and Organization Toolkit (*outbreak_tools.outbreak_tools*)
+---------------------------------------------------------------------
+.. toctree::
+   outbreak_tools.cluster_df <cluster_df>
+   outbreak_tools.const_idx <const_idx>
+   outbreak_tools.datebin_and_agg <datebin_and_agg>
+   outbreak_tools.infer_mutations <infer_mutations>
+   outbreak_tools.first_date <first_date>
+   outbreak_tools.get_colors <get_colors>
+   outbreak_tools.get_riverplot_baseline <get_riverplot_baseline>
+   outbreak_tools.get_tree <get_tree>
+   outbreak_tools.get_ww_weights <get_ww_weights>
+ 
+Lineage Clustering (*outbreak_tools.outbreak_clustering*)
+----------------------------------------------------------
+.. toctree::
+   outbreak_clustering.cluster_lineages <cluster_lineages>
+   outbreak_clustering.gather_groups <gather_groups>
+   outbreak_clustering.get_agg_prevalence <get_agg_prevalence>
+   outbreak_clustering.get_compressed_tree <get_compressed_tree>
+   outbreak_clustering.get_lineage_key <get_lineage_key>
+
+Example Applications and Analyses
+----------------------------------
 .. toctree::
    Epidemiological data analyses <epidem_analysis>
-   Lineage Prevalence Analyses <lineage_prevalence>
    Mutation Data Analyses <mutation_analysis>
    Dealing with Cryptic Variants <cryptic_vars> 
