@@ -216,7 +216,7 @@ def mutation_prevalences( mutations=None, location=None, pango_lin=None, datemin
      :return: A pandas dataframe of mutation information.
 
      :Parameter example: { 'mutations': ['orf1b:r1315c', 's:l24s'], 'pango_lin': 'BA.2' } """
-    query = f'mutations={", ".join(_list_if_str(mutations))}'
+    query = f'mutations={" AND ".join(_list_if_str(mutations))}'
     if pango_lin is not None: query += f'&pangolin_lineage={pango_lin}'
     if location is not None: query += f'&location_id={location}'
     if datemin is not None: query += f'&min_date={datemin}'
@@ -247,7 +247,7 @@ def lineage_cl_prevalence( pango_lin, descendants=False, location=None, mutation
     query += f'&cumulative={_lboolstr(cumulative)}'
     if datemin is not None: query += f'&min_date={datemin}'
     if datemax is not None: query += f'&max_date={datemax}'
-     try:
+    try:
         data = _get_outbreak_data('genomics/prevalence-by-location', query, collect_all=False, **req_args)
         return pd.DataFrame(data['results']) if cumulative else _multiquery_to_df(data).set_index(['date'])
     except KeyError:
@@ -377,6 +377,17 @@ def get_wastewater_latest(**kwargs):
         server=kwargs.get('server'), auth=kwargs.get('auth') ) 
     return _get_ww_results(data)['collection_date'][0]
 
+
+def get_coverage(all_intervals):
+    all_coverages = []
+    for interval_list in all_intervals:
+        coverage = 0
+        for interval in interval_list:
+            coverage += interval['end'] - interval['start']
+        all_coverages.append(coverage/29903*100.)
+    return all_coverages
+
+
 def get_wastewater_samples(**kwargs):
     """Get IDs and metadata of wastewater samples matching a given query.
 
@@ -389,6 +400,7 @@ def get_wastewater_samples(**kwargs):
      :param population_at_least: Minimum population threshold for matching samples.
      :param demix_success: Whether to gather only samples with valid lineage mix data.
      :param variants_success: Whether to gather only samples with valid mutation data.
+     :param min_cov: Minimum sequencing coverage required for inclusion. 
 
      :return: A pandas dataframe containing the IDs and metadata of matching samples.
 
@@ -397,6 +409,7 @@ def get_wastewater_samples(**kwargs):
     data = _get_outbreak_data( 'wastewater_metadata/query', f"q=" + query,
                               collect_all=True, server=kwargs.get('server'), auth=kwargs.get('auth'))
     df = _get_ww_results(data).drop(columns=['_score', '_id'])
+    df['coverage'] = get_coverage(df['coverage_intervals'])
     df['viral_load'] = df['viral_load'].where(df['viral_load'] != -1, pd.NA)
     df['normed_viral_load'] = _normalize_viral_loads_by_site(df)
     return df.set_index('collection_date')

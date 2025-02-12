@@ -5,6 +5,9 @@ import requests
 import gzip
 import yaml
 import json
+import warnings
+from outbreak_data import outbreak_data
+import re
 
 from outbreak_tools import outbreak_clustering
 
@@ -181,13 +184,26 @@ def read_compressed_tree(file='./tree.json.gz'):
     with gzip.open(file, 'rb') as f:
         return frozendict.deepfreeze(json.loads(f.read()))
         
-def cluster_df(df, clusters, tree, lineage_key=None, norm=True):
+#--- borrowed from SEARCH wastewater surveillance dashboard#
+def convert_rbg_to_tuple( rgb ):
+    print(rgb)
+    rgb = rgb.lstrip( "#" )
+    return tuple( int( rgb[i :i + 2], 16 ) for i in (0, 2, 4) )
+def convert_tuple_to_rgb( r, g, b ):
+    return '#%02x%02x%02x' % (int(r), int(g), int(b))
+def lighten_field( value, alpha, gamma=2.2 ):
+    return pow( pow(255, gamma) * (1 - alpha) + pow( value, gamma ) * alpha, 1 / gamma)
+def lighten_color( r, g, b, alpha, gamma=2.2 ):
+    return lighten_field(r, alpha, gamma ), lighten_field( g, alpha, gamma ), lighten_field( b, alpha, gamma )
+
+def cluster_df(df, clusters, tree, lineage_key=None, norm=True, cmap = None):
     """Aggregate the columns of a dataframe into some phylogenetic groups.
 
      :param df: A dataframe of prevalence signals. Rows are assumed to be date bins and columns are assumed to be lineages.
      :param clusters: A tuple (U,V) of sets of root nodes representing clusters (from cluster_lineages).
      :param tree: A frozendict representing the root of the phylo tree object.
      :param lineage_key: An OrderedDict mapping names to tree nodes.
+     :param norm: Whether to assume that values in a row should sum to one.
      :param norm: Whether to assume that values in a row should sum to one.
 
      :return: A tuple (data,names,is_inclusive) where data is the input dataframe with aggregated and relabeled columns, names contains the names of the root lineages for each column/group, and is_inclusive indicates whether the column's root is in U or V."""
@@ -197,8 +213,9 @@ def cluster_df(df, clusters, tree, lineage_key=None, norm=True):
     dates = [date for date,row in df.iterrows()]
     order = np.argsort([w['alias'] for w in list(U)+list(V)])
     lins = list(np.array(list(U)+list(V))[order])
-    ulabels = [f'      {u["alias"]}*' + (f' ({u["name"]})' if u["name"] != u["alias"] else '') for u in U]
+    ulabels = [f'{u["alias"]}*' + (f' ({u["name"]})' if u["name"] != u["alias"] else '') for u in U]
     vlabels = [f'other {v["alias"]}*' + (f' ({v["name"]})' if v["name"] != v["alias"] else '') for v in V]
+
     legend = list(np.array(ulabels+vlabels)[order])
     clustered_prevalences = pd.DataFrame(
         { d: { label:outbreak_clustering.get_agg_prevalence(lin, a, U|V)
@@ -209,3 +226,183 @@ def cluster_df(df, clusters, tree, lineage_key=None, norm=True):
         clustered_prevalences['other **'] += 1 - clustered_prevalences.sum(axis=1)
         clustered_prevalences['other **'] = np.clip(clustered_prevalences['other **'], 0, 1)
     return clustered_prevalences, [lin['name'] for lin in lins], np.array([1]*len(U)+[0]*len(V))[order]
+
+
+def cluster_df_wcolors(df, clusters, tree, lineage_key=None, norm=True, cmap = None):
+    """Aggregate the columns of a dataframe into some phylogenetic groups.
+
+     :param df: A dataframe of prevalence signals. Rows are assumed to be date bins and columns are assumed to be lineages.
+     :param clusters: A tuple (U,V) of sets of root nodes representing clusters (from cluster_lineages).
+     :param tree: A frozendict representing the root of the phylo tree object.
+     :param lineage_key: An OrderedDict mapping names to tree nodes.
+     :param norm: Whether to assume that values in a row should sum to one.
+     :param norm: Whether to assume that values in a row should sum to one.
+
+     :return: A tuple (data,names,is_inclusive) where data is the input dataframe with aggregated and relabeled columns, names contains the names of the root lineages for each column/group, and is_inclusive indicates whether the column's root is in U or V."""
+    if lineage_key is None: tree = get_lineage_key(tree)
+    (U,V) = clusters
+    prevalences_dated = [row for date,row in df.iterrows()]
+    dates = [date for date,row in df.iterrows()]
+    order = np.argsort([w['alias'] for w in list(U)+list(V)])
+    lins = list(np.array(list(U)+list(V))[order])
+    ulabels = [f'{u["alias"]}*' + (f' ({u["name"]})' if u["name"] != u["alias"] else '') for u in U]
+    vlabels = [f'other {v["alias"]}*' + (f' ({v["name"]})' if v["name"] != v["alias"] else '') for v in V]
+
+    # get related sequences'
+    ualiases = [w['alias'] for w in list(U)]
+    valiases = [w['alias'] for w in list(V)]
+
+    alias_subsetted = {}
+    for u in ualiases:
+        alias_subsetted[u] = list(np.sort([w for w in valiases if u.startswith(w)]))
+    # get overlapping classes across groups
+    overlaps = set()
+    for v in alias_subsetted.values():
+        for v2 in alias_subsetted.values():
+            if v != v2:
+                newOverlap = set(v) & set(v2)
+                overlaps = overlaps | newOverlap
+    for alias in alias_subsetted.keys():
+        alias_subsetted[alias] = [u for u in alias_subsetted[alias] if u not in overlaps]
+    #iteratively pass through the overlaps to get additional groups.
+    overlaps = list(np.sort(list(overlaps)))
+    while len(overlaps)>1:
+        candidate_list = list(np.sort([w for w in overlaps[0:len(overlaps)-1] if overlaps[-1].startswith(w)]))
+        if len(candidate_list)>5:
+            candidate_list = candidate_list[len(candidate_list)-5:len(candidate_list)]
+        alias_subsetted[overlaps[-1]] = candidate_list
+        overlaps.remove(overlaps[-1])
+        for ci in candidate_list:
+            overlaps.remove(ci)
+    if len(overlaps) ==1:
+        alias_subsetted[overlaps[0]] = []
+    lincolors = {}
+    delta = 0.15
+    from matplotlib.colors import rgb2hex
+    for j,pkey in enumerate(alias_subsetted.keys()):
+        parent_color = convert_rbg_to_tuple(rgb2hex(cmap(j)))
+        for j0,ckey in enumerate(alias_subsetted[pkey]):
+            lincolors[ckey] = convert_tuple_to_rgb( *lighten_color( *parent_color, alpha=1.0-(delta*(j0)) )) 
+        if len(alias_subsetted[pkey]) == 0:
+            lincolors[pkey] = cmap(j)
+        else:
+            lincolors[pkey] = convert_tuple_to_rgb( *lighten_color( *parent_color, alpha=1.0-(delta*(j0+1)) ))      
+    legend = list(np.array(ulabels+vlabels)[order])
+    clustered_prevalences = pd.DataFrame(
+        { d: { label:outbreak_clustering.get_agg_prevalence(lin, a, U|V)
+            for label, lin in zip(legend, lins) }
+        for d,a in zip(dates, prevalences_dated) } ).transpose()
+    if norm:
+        clustered_prevalences[np.sum(clustered_prevalences, axis=1) < 0.5] = pd.NA
+        clustered_prevalences['other **'] += 1 - clustered_prevalences.sum(axis=1)
+        clustered_prevalences['other **'] = np.clip(clustered_prevalences['other **'], 0, 1)
+    return clustered_prevalences, [lin['name'] for lin in lins], np.array([1]*len(U)+[0]*len(V))[order], lincolors, (ualiases+valiases)
+
+
+
+def id_lookup(locations, max_results = 10, table = False):
+    """
+    Helps find location ID for use with outbreak_data.py
+    Requires integration with get_outbreak_data
+    :param locations: A string or list of location names
+    :param max_results: Int, of how many results to return
+    :param table: If True, returns all results as pandas DataFrame
+    :return: location_id
+    """
+    warnings.filterwarnings("ignore", message='Warning!: Data has "results" but length of data is 0')
+    #setting max_colwidth for showing full-name completely in table
+    pd.set_option("max_colwidth", 300)
+    locIds_of_interest=[]
+    locIds_not_found=[]
+    locations_not_found=[]
+    if isinstance(locations, str):
+        locations = [locations]
+    #first pass of the query tries every location name as-is & collects malformed queries
+    for i in locations:
+        locId_arg = "name=" + i
+        results = outbreak_data._get_outbreak_data('genomics/location', locId_arg)
+        if results != None:
+            if (len(results) == 0):
+                locIds_not_found.extend([i])
+            else:
+                df = pd.DataFrame(results['results'])
+                #print(df.columns)
+                if (df.shape[0]==1):
+                    locIds_of_interest.extend([df.id.unique()[0]])
+                else:
+                    locIds_not_found.extend([i])
+        #everything matches up
+        if (len(locIds_of_interest)==len(locations)):
+            return locIds_of_interest
+        #any locations not found require further investigation (*name* must be a catch-all?)
+        if (len(locIds_of_interest)!=len(locations)):
+            not_found=[]
+            for i in locIds_not_found:
+                locs=''.join(['*', i, '*'])
+                not_found.extend([locs])
+            locations_not_found = not_found
+    all_hits = None
+    #using genomic endpoint to parse location names and corrects malformed queries
+    for i in range(0, len(locations_not_found)):
+        locId = "name=" + locations_not_found[i]
+        results = outbreak_data._get_outbreak_data('genomics/location', locId)
+        hits = pd.DataFrame()
+        if(len(results) >= 1):
+            hits = pd.DataFrame(results['results'])
+        if(hits.shape[0] == 0):
+            next
+        else:
+            #replacing code with meaning
+            hits.admin_level.replace(-1, "World Bank Region", inplace=True)
+            hits.admin_level.replace(0, "country", inplace=True)
+            hits.admin_level.replace(1, "state/province", inplace=True)
+            hits.admin_level.replace(1.5, "metropolitan area", inplace=True)
+            hits.admin_level.replace(2, "county", inplace=True)
+            hits['full'] = hits.label + ' ' + " (" + ' ' + hits.admin_level + ' ' + ")"
+            hits = hits[:max_results]
+            hits.index= pd.MultiIndex.from_arrays([[locations_not_found[i].strip('*')] * len(hits.index)
+                                                      ,list(hits.index)], names=['Query', 'Index'])
+            if isinstance(all_hits, pd.core.frame.DataFrame):
+                all_hits = all_hits.append(hits)
+            else:
+                all_hits = hits.copy()
+            if not table:
+                # ask questions about ambiguous names (one-to-many)
+                print("\n")
+                display(hits['full'])
+                print('Int values must be entered in comma seperated format.')
+                loc_sel = input("Enter the indices of locations of interest in dataframe above: ")
+                if loc_sel == '':
+                    raise ValueError('Input string is empty, enter single or multiple int comma seperated value/s before submitting.')
+                input_locs = list(loc_sel.split(','))
+                for i in range(len(input_locs)):
+                    val = re.search(r' *[0-9]+', input_locs[i])
+                    if (isinstance(val, re.Match)):
+                        if (val.group() != ''):
+                            val = int(val.group())
+                            input_locs[i] = val
+                all_int = all([isinstance(x, int) for x in input_locs])
+                if all_int:
+                    locIds_of_interest.extend(hits.iloc[input_locs, :].id)
+                else:
+                    print("Input entries are all not int. Please try again.")
+                    print('\n')
+                    display(hits['full'])
+                    loc_sel = input("Enter the indices of locations of interest in dataframe above: ")
+                    if loc_sel == '':
+                        raise ValueError('Input string is empty, enter single or multiple int comma seperated value/s before submitting.')
+                    input_locs = list(loc_sel.split(','))
+                    for i in range(len(input_locs)):
+                        val = re.search(r' *[0-9]+', input_locs[i])
+                        if (isinstance(val, re.Match)):
+                            if (val.group() != ''):
+                                val = int(val.group())
+                                input_locs[i] = val
+                    all_int = all([isinstance(x, int) for x in input_locs])
+                    if all_int:
+                        locIds_of_interest.extend(hits.iloc[input_locs, :].id)
+                print('\n')
+    if table:
+        #necessary identification
+        return all_hits.loc[:, ['id', 'label', 'admin_level']]
+    return locIds_of_interest
