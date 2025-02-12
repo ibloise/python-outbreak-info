@@ -189,9 +189,9 @@ def cluster_df(df, clusters, tree, lineage_key=None, norm=True, cmap = None):
      :return: A tuple (data,names,is_inclusive) where data is the input dataframe with aggregated and relabeled columns, names contains the names of the root lineages for each column/group, and is_inclusive indicates whether the column's root is in U or V."""
     if lineage_key is None: tree = get_lineage_key(tree)
     (U,V,K) = clusters
-    if include_K:
-        U = U|K
-        K = set([])
+    # if include_K:
+    #     U = U|K
+    #     K = set([])
     prevalences_dated = [row for date,row in df.iterrows()]
     dates = [date for date,row in df.iterrows()]
     order = np.argsort([w['alias'] for w in list(U)+list(V)])
@@ -223,7 +223,10 @@ def cluster_df_wcolors(df, clusters, tree, lineage_key=None, norm=True, cmap = N
 
      :return: A tuple (data,names,is_inclusive) where data is the input dataframe with aggregated and relabeled columns, names contains the names of the root lineages for each column/group, and is_inclusive indicates whether the column's root is in U or V."""
     if lineage_key is None: tree = get_lineage_key(tree)
-    (U,V) = clusters
+    (U,V,K) = clusters
+    # if include_K:
+    #     U = U|K
+    #     K = set([])
     prevalences_dated = [row for date,row in df.iterrows()]
     dates = [date for date,row in df.iterrows()]
     order = np.argsort([w['alias'] for w in list(U)+list(V)])
